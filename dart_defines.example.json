@@ -1,0 +1,5 @@
+{
+  "API_BASE_URL": "http://10.0.2.2:8081",
+  "GOOGLE_SHEETS_SERVICE_URL": "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
+  "GOOGLE_SHEETS_SERVICE_TOKEN": "SET_A_NEW_TEST_TOKEN_LOCALLY"
+}

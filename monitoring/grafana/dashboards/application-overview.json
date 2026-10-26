@@ -1,0 +1,15 @@
+{
+  "uid": "afghanpay-overview",
+  "title": "Afghan EMI — Application Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    { "id": 1, "type": "stat", "title": "API Available", "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 }, "targets": [{ "expr": "up{job=\"afghanpay-backend\"}", "legendFormat": "API" }] },
+    { "id": 2, "type": "stat", "title": "Successful Transactions", "gridPos": { "x": 4, "y": 0, "w": 5, "h": 4 }, "targets": [{ "expr": "afghanpay_transactions_total_by_status{status=\"SUCCESS\"}", "legendFormat": "Success" }] },
+    { "id": 3, "type": "stat", "title": "Failed Transactions", "gridPos": { "x": 9, "y": 0, "w": 5, "h": 4 }, "targets": [{ "expr": "afghanpay_transactions_total_by_status{status=\"FAILED\"}", "legendFormat": "Failed" }] },
+    { "id": 4, "type": "timeseries", "title": "API Request Rate", "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 }, "targets": [{ "expr": "sum(rate(afghanpay_http_requests_total[5m]))", "legendFormat": "requests/sec" }] },
+    { "id": 5, "type": "timeseries", "title": "API p95 Latency", "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 }, "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(afghanpay_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95" }] }
+  ]
+}

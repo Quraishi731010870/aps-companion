@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>APS ↔ ACSS Financial Settlement API & Security Integration</title>
+  <style>
+    :root{--ink:#092838;--navy:#06344a;--teal:#008d83;--cyan:#26b8c6;--mint:#eaf8f5;--gold:#d7a52a;--red:#c43e4f;--green:#19875f;--paper:#fff;--muted:#5e7280;--line:#dce8eb;--shadow:0 22px 70px rgba(5,45,61,.18)}
+    *{box-sizing:border-box} html,body{margin:0;height:100%;overflow:hidden;background:#071e2b;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+    body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 10% 15%,rgba(38,184,198,.18),transparent 28%),radial-gradient(circle at 90% 85%,rgba(215,165,42,.12),transparent 30%);pointer-events:none}
+    .deck{height:100%;display:grid;place-items:center;padding:22px}.slide{display:none;position:relative;width:min(94vw,1600px);aspect-ratio:16/9;background:linear-gradient(135deg,#fff 0%,#f7fbfc 100%);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:58px 70px 55px}.slide.active{display:block;animation:enter .35s ease}@keyframes enter{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+    .slide:after{content:"";position:absolute;right:-90px;top:-90px;width:260px;height:260px;border-radius:50%;border:42px solid rgba(0,141,131,.07)}
+    .topline{position:absolute;left:0;right:0;top:0;height:8px;background:linear-gradient(90deg,var(--teal),var(--cyan),var(--gold))}.brand{position:absolute;top:25px;right:42px;font-size:14px;font-weight:800;letter-spacing:.11em;color:var(--teal)}
+    h1{font-size:clamp(36px,4vw,68px);line-height:1.05;margin:0 0 18px;letter-spacing:-.035em}h2{font-size:clamp(30px,3.1vw,52px);margin:0 0 25px;letter-spacing:-.025em;color:var(--navy)}h3{font-size:22px;margin:0 0 9px;color:var(--navy)}p{font-size:20px;line-height:1.48;margin:8px 0;color:#2f4e5c}.lead{font-size:clamp(22px,2vw,31px);line-height:1.4;color:#365a69}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-weight:800;color:var(--teal);font-size:15px;margin-bottom:16px}.accent{color:var(--teal)}.gold{color:#a77400}.muted{color:var(--muted)}.small{font-size:15px}.tiny{font-size:12px}.center{text-align:center}.right{text-align:right}
+    ul{padding-left:24px;margin:9px 0}li{font-size:18px;line-height:1.42;margin:8px 0}li::marker{color:var(--teal)}
+    .grid{display:grid;gap:18px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 8px 25px rgba(7,51,69,.06)}.card.tint{background:var(--mint);border-color:#c9ece6}.card.dark{background:var(--navy);color:#fff}.card.dark h3,.card.dark p{color:#fff}.num{font-size:36px;font-weight:900;color:var(--teal)}.icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:var(--mint);color:var(--teal);font-size:24px;margin-bottom:12px}.pill{display:inline-block;padding:7px 12px;border-radius:999px;background:var(--mint);color:#08736c;font-weight:800;font-size:13px;margin:3px}.pill.warn{background:#fff1cf;color:#8a5b00}.pill.red{background:#ffe9ed;color:#a82f41}.pill.blue{background:#e7f4fa;color:#075f83}
+    .flow{display:flex;align-items:stretch;gap:11px;margin-top:18px}.node{flex:1;background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;text-align:center;position:relative}.node:not(:last-child):after{content:"→";position:absolute;right:-17px;top:41%;z-index:2;font-size:23px;color:var(--teal);font-weight:900}.node strong{display:block;color:var(--navy);margin-bottom:6px}.node span{font-size:14px;color:var(--muted)}
+    .sequence{display:grid;grid-template-columns:150px 1fr 150px;gap:0;align-items:center}.actor{text-align:center;font-weight:900;color:var(--navy);background:var(--mint);border-radius:15px;padding:18px}.arrow{margin:8px 18px;border-top:2px solid var(--teal);position:relative;text-align:center}.arrow:after{content:"▶";position:absolute;right:-4px;top:-11px;color:var(--teal)}.arrow.back:after{right:auto;left:-4px;transform:rotate(180deg)}.arrow label{position:relative;top:-25px;background:#fff;padding:0 8px;font-size:13px;color:#385866}
+    table{width:100%;border-collapse:separate;border-spacing:0;font-size:15px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}th{background:var(--navy);color:#fff;text-align:left;padding:12px}td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:top}tr:nth-child(even) td{background:#f7fbfc}.code{background:#071e2b;color:#d8f6ee;border-radius:14px;padding:18px;font:13px/1.48 "SFMono-Regular",Consolas,monospace;white-space:pre-wrap}.callout{border-left:5px solid var(--gold);background:#fff8e8;padding:15px 18px;border-radius:0 12px 12px 0;font-size:17px}.danger{border-left-color:var(--red);background:#fff2f4}.success{border-left-color:var(--green);background:#edf9f4}.footer{position:absolute;left:70px;right:70px;bottom:22px;display:flex;justify-content:space-between;color:#78909b;font-size:12px}.progress{position:fixed;left:0;bottom:0;height:5px;background:linear-gradient(90deg,var(--teal),var(--cyan));transition:width .25s;z-index:5}.controls{position:fixed;right:24px;bottom:18px;display:flex;gap:8px;z-index:7}.controls button{border:1px solid rgba(255,255,255,.25);background:rgba(7,30,43,.8);color:#fff;border-radius:10px;padding:9px 13px;cursor:pointer}.title-slide{background:linear-gradient(135deg,#062f43,#07556a 55%,#008d83);color:#fff}.title-slide h1,.title-slide p{color:#fff}.title-slide:after{border-color:rgba(255,255,255,.08);width:420px;height:420px;right:-120px;top:-120px}.title-slide .eyebrow{color:#7ce4dc}.title-mark{font-size:90px;font-weight:900;opacity:.12;position:absolute;right:70px;bottom:70px}.divider{height:3px;width:90px;background:var(--gold);margin:22px 0}.status{position:absolute;left:70px;bottom:55px;display:flex;gap:8px}.tag{padding:8px 13px;border:1px solid rgba(255,255,255,.28);border-radius:999px;font-size:13px}.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:32px;align-items:start}.bigquote{font-size:30px;line-height:1.35;font-weight:750;color:var(--navy);border-left:6px solid var(--teal);padding-left:24px}.checklist{list-style:none;padding:0}.checklist li{padding-left:30px;position:relative}.checklist li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:900}.no{list-style:none;padding:0}.no li{padding-left:30px;position:relative}.no li:before{content:"×";position:absolute;left:0;color:var(--red);font-weight:900;font-size:23px}.timeline{display:flex;gap:8px;align-items:stretch}.phase{flex:1;padding:17px;border-radius:14px;background:#fff;border-top:5px solid var(--teal);box-shadow:0 6px 20px rgba(0,0,0,.05)}.phase b{display:block;color:var(--teal);font-size:14px;margin-bottom:8px}.phase p{font-size:15px}.kpi{font-size:31px;font-weight:900;color:var(--navy)}
+    @media(max-width:900px){.slide{padding:42px 35px}.g4{grid-template-columns:repeat(2,1fr)}.footer{left:35px;right:35px}.brand{right:25px}.slide{overflow:auto}.controls{display:none}}
+    @media print{html,body{overflow:visible;background:#fff}.deck{display:block;padding:0}.slide,.slide.active{display:block;width:100%;height:100vh;aspect-ratio:auto;border-radius:0;box-shadow:none;page-break-after:always}.controls,.progress{display:none}}
+  </style>
+</head>
+<body>
+<main class="deck">
+  <section class="slide title-slide active">
+    <div class="topline"></div><div class="eyebrow">Joint technical review</div>
+    <h1>APS ↔ ACSS<br><span style="color:#7ce4dc">Financial Settlement API</span><br>& Security Integration</h1>
+    <div class="divider"></div><p class="lead">A secure, auditable and idempotent contract for batch-based financial settlement.</p>
+    <div class="status"><span class="tag">Version 1.3</span><span class="tag">Draft for ACSS review</span><span class="tag">11 October 2026</span></div><div class="title-mark">APS ⇄ ACSS</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">APS × ACSS</div><div class="eyebrow">Executive context</div><h2>The integration objective</h2>
+    <div class="two-col"><div><p class="bigquote">Move settlement batches from APS to ACSS with record-level traceability, cryptographic trust and safe retry behavior.</p><div class="callout">This document is a proposed contract. URLs, status semantics, algorithms, certificate profiles and operating limits require joint approval before UAT.</div></div>
+    <div class="grid g2"><div class="card tint"><div class="icon">▦</div><h3>Batch submission</h3><p>One protected request carries multiple financial records.</p></div><div class="card"><div class="icon">⌁</div><h3>Per-record outcome</h3><p>Every message receives exactly one result.</p></div><div class="card"><div class="icon">◆</div><h3>End-to-end trust</h3><p>Sign, encrypt and transmit over mTLS.</p></div><div class="card"><div class="icon">↻</div><h3>Safe recovery</h3><p>Idempotency protects retries from duplicate posting.</p></div></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">AGENDA</div><div class="eyebrow">Discussion map</div><h2>What we need to align</h2>
+    <div class="grid g3"><div class="card"><div class="num">01</div><h3>Business contract</h3><p>Batch structure, record identity, currencies and response semantics.</p></div><div class="card"><div class="num">02</div><h3>API behavior</h3><p>Endpoints, HTTP outcomes, sync/async processing and limits.</p></div><div class="card"><div class="num">03</div><h3>Security profile</h3><p>JWS-in-JWE, mTLS, certificates, key ownership and fail-closed rules.</p></div><div class="card"><div class="num">04</div><h3>Reliability</h3><p>Idempotency, replay prevention, retry and reconciliation.</p></div><div class="card"><div class="num">05</div><h3>Operations</h3><p>Audit evidence, monitoring, support and incident response.</p></div><div class="card"><div class="num">06</div><h3>Joint decisions</h3><p>Open points, UAT scope and acceptance criteria.</p></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">SCOPE</div><div class="eyebrow">Responsibility boundary</div><h2>Who does what?</h2>
+    <div class="g2 grid"><div class="card tint"><h3>APS Settlement Engine</h3><ul><li>Builds and validates settlement batches</li><li>Generates stable financial message IDs</li><li>Signs requests with APS private signing key</li><li>Encrypts for ACSS using ACSS public certificate</li><li>Verifies ACSS responses before state changes</li><li>Reconciles every submitted record</li></ul></div><div class="card"><h3>ACSS Settlement Platform</h3><ul><li>Authenticates transport and decrypts requests</li><li>Verifies APS signature before processing</li><li>Validates and processes each record</li><li>Returns a result for every message ID</li><li>Signs responses and encrypts them for APS</li><li>Persists idempotency and audit evidence</li></ul></div></div>
+    <div class="callout danger" style="margin-top:20px"><strong>Trust boundary:</strong> HTTP success alone is never proof that a financial entry was accepted or settled.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">PRINCIPLES</div><div class="eyebrow">Non-negotiable behavior</div><h2>Core integration principles</h2>
+    <div class="grid g3"><div class="card"><h3>One batch</h3><p>One request represents one settlement batch with a records array.</p></div><div class="card"><h3>Stable record ID</h3><p><b>financialMessageId</b> is immutable across retries.</p></div><div class="card"><h3>Shared batch ID</h3><p><b>settlementBatchId</b> groups records; it is not the record identifier.</p></div><div class="card"><h3>Complete response</h3><p>Exactly one outcome for every submitted message ID.</p></div><div class="card"><h3>Explicit direction</h3><p>Use DEBIT/CREDIT with a non-negative amount.</p></div><div class="card"><h3>Layered security</h3><p>JWS + JWE + HTTPS/mTLS; each control has a distinct purpose.</p></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">ARCHITECTURE</div><div class="eyebrow">High-level design</div><h2>Protected settlement path</h2>
+    <div class="flow"><div class="node"><strong>APS data sources</strong><span>Validated settlement records</span></div><div class="node"><strong>Batch orchestrator</strong><span>IDs, controls, totals</span></div><div class="node"><strong>Crypto service</strong><span>JWS then JWE</span></div><div class="node"><strong>mTLS API gateway</strong><span>Network trust boundary</span></div><div class="node"><strong>ACSS processor</strong><span>Validate, post, respond</span></div></div>
+    <div class="grid g3" style="margin-top:32px"><div class="card tint"><h3>Confidentiality</h3><p>JWE protects financial data from unauthorized disclosure.</p></div><div class="card tint"><h3>Integrity & authenticity</h3><p>JWS proves the signer and detects changes to the full message.</p></div><div class="card tint"><h3>Transport identity</h3><p>mTLS authenticates both systems and protects the connection.</p></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">MESSAGE FLOW</div><div class="eyebrow">Request and response</div><h2>Sign → encrypt → transmit → verify</h2>
+    <div class="sequence"><div class="actor">APS</div><div><div class="arrow"><label>1. Build + validate complete batch</label></div><div class="arrow"><label>2. Sign with APS private signing key</label></div><div class="arrow"><label>3. Encrypt to ACSS public encryption key</label></div><div class="arrow"><label>4. Send over HTTPS + mTLS</label></div><div class="arrow back"><label>8. Encrypted + ACSS-signed response</label></div></div><div class="actor">ACSS</div></div>
+    <div class="flow" style="margin-top:24px"><div class="node"><strong>Decrypt</strong><span>ACSS private key</span></div><div class="node"><strong>Verify</strong><span>APS public certificate</span></div><div class="node"><strong>Process</strong><span>Replay + business checks</span></div><div class="node"><strong>Respond</strong><span>Sign then encrypt for APS</span></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">API</div><div class="eyebrow">Proposed surface</div><h2>Endpoints and processing modes</h2>
+    <table><thead><tr><th>Method</th><th>Endpoint</th><th>Purpose</th><th>Status</th></tr></thead><tbody><tr><td><b>POST</b></td><td>/api/v1/settlements/batches</td><td>Submit one encrypted settlement batch</td><td><span class="pill">Required</span></td></tr><tr><td><b>GET</b></td><td>/api/v1/settlements/batches/{settlementBatchId}</td><td>Retrieve batch-processing status</td><td><span class="pill warn">Confirm</span></td></tr><tr><td><b>GET</b></td><td>/api/v1/settlements/messages/{financialMessageId}</td><td>Retrieve one financial-message result</td><td><span class="pill warn">Confirm</span></td></tr></tbody></table>
+    <div class="g2 grid" style="margin-top:22px"><div class="card"><h3>Synchronous</h3><p><span class="pill blue">200 OK</span> returns final per-record outcomes in the response.</p></div><div class="card"><h3>Asynchronous</h3><p><span class="pill blue">202 Accepted</span> returns a receipt; final results arrive via polling or signed callback.</p></div></div>
+    <p class="small muted">Base URL shown in the specification is a placeholder. ACSS must provide separate UAT and production URLs.</p>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">DATA CONTRACT</div><div class="eyebrow">Record schema</div><h2>Required financial record fields</h2>
+    <table><thead><tr><th>Field</th><th>Type</th><th>Rule</th></tr></thead><tbody><tr><td>institutionName</td><td>string</td><td>Display name of participating institution</td></tr><tr><td>institutionCode</td><td>string</td><td>Canonical ACSS-approved institution code</td></tr><tr><td>bin</td><td>string</td><td>Preserve leading zeros; meaning requires ACSS confirmation</td></tr><tr><td>financialMessageId</td><td>string</td><td>Unique, stable and immutable per record</td></tr><tr><td>settlementType</td><td>enum</td><td>DEBIT or CREDIT</td></tr><tr><td>amount</td><td>decimal</td><td>Non-negative; agreed currency precision; no separators</td></tr><tr><td>currency</td><td>string</td><td>AFN or USD</td></tr><tr><td>settlementBatchId</td><td>string</td><td>Same value for every record in the batch</td></tr><tr><td>batchDate</td><td>date</td><td>ISO 8601 business date: YYYY-MM-DD</td></tr></tbody></table>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">ENVELOPE</div><div class="eyebrow">On-the-wire request</div><h2>Illustrative request envelope</h2>
+    <div class="two-col"><pre class="code">{
+  "schemaVersion": "1.0",
+  "messageType": "SETTLEMENT_REQUEST",
+  "sender": "APS",
+  "recipient": "ACSS",
+  "signingKeyId": "APS-SIGN-KEY-2026-01",
+  "encryptionKeyId": "ACSS-ENC-KEY-2026-01",
+  "payloadFormat": "JWS-IN-JWE",
+  "encryptedPayload": "&lt;JWE compact token&gt;"
+}</pre><div><h3>Critical interpretation</h3><ul><li>The business JSON is inside the signed JWS.</li><li>The signed JWS is encrypted inside JWE.</li><li>Outer metadata is not trusted until matched to protected headers.</li><li>The final profile must choose wrapper JSON or raw JWE.</li><li>Content type and serialization require ACSS approval.</li></ul><div class="callout danger">Never send the example business payload as plaintext in production.</div></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">BUSINESS PAYLOAD</div><div class="eyebrow">Decrypted structure</div><h2>One header, many records</h2>
+    <div class="two-col"><pre class="code">{
+  "schemaVersion": "1.0",
+  "requestId": "APS-REQ-20261004-0031",
+  "createdAt": "2026-10-04T08:30:00Z",
+  "settlementBatchId": "31",
+  "batchDate": "2026-10-04",
+  "sourceSystem": "APS-Settlement-Engine",
+  "records": [
+    {
+      "institutionName": "RPS-BMA",
+      "institutionCode": "ID1401",
+      "bin": "9",
+      "financialMessageId": "APS-SE-20261004-000943",
+      "settlementType": "CREDIT",
+      "amount": 111754.00,
+      "currency": "AFN"
+    }
+  ]
+}</pre><div><div class="card tint"><h3>Recommended additions</h3><p><b>requestId</b> provides end-to-end correlation.</p><p><b>createdAt</b> supports replay-window enforcement.</p><p><b>controlTotals</b> should be included if ACSS mandates batch debit/credit totals.</p></div><div class="callout" style="margin-top:15px">The source value “31” and numeric “BIN” examples remain provisional mappings.</div></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">RESPONSE</div><div class="eyebrow">Per-record accountability</div><h2>Every submitted ID needs one outcome</h2>
+    <div class="g2 grid"><div class="card"><h3>Required echoed fields</h3><ul><li>financialMessageId</li><li>settlementType and amount</li><li>currency</li><li>settlementBatchId and batchDate</li></ul></div><div class="card tint"><h3>Outcome fields</h3><ul><li><b>status:</b> ACP or RJC</li><li><b>rejectReason:</b> required for RJC</li><li>Stable machine-readable reason code</li><li>Human-readable description</li></ul></div></div>
+    <div class="callout danger" style="margin-top:20px"><strong>Open semantic decision:</strong> ACP must mean exactly one lifecycle state—received, validated, accepted for settlement, or fully settled.</div>
+    <div class="callout success" style="margin-top:12px">APS decrypts and verifies the ACSS signature before storing results or changing any settlement status.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">HTTP OUTCOMES</div><div class="eyebrow">Transport versus business result</div><h2>Expected handling by APS</h2>
+    <table><thead><tr><th>HTTP</th><th>Meaning</th><th>Required APS action</th></tr></thead><tbody><tr><td>200</td><td>Synchronous outcomes returned</td><td>Verify signature and exact response completeness</td></tr><tr><td>202</td><td>Accepted for asynchronous processing</td><td>Persist receipt; poll or await signed callback</td></tr><tr><td>400</td><td>Malformed or structurally invalid</td><td>Correct request; do not retry unchanged</td></tr><tr><td>401 / 403</td><td>Authentication, certificate or authorization failure</td><td>Stop and raise security/integration alert</td></tr><tr><td>409</td><td>Duplicate or idempotency conflict</td><td>Retrieve prior result; never mint a new ID blindly</td></tr><tr><td>413 / 429</td><td>Size or rate limit</td><td>Follow agreed split/retry rules and Retry-After</td></tr><tr><td>5xx</td><td>ACSS service failure</td><td>Retry safely with the same identifiers</td></tr></tbody></table>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">CRYPTOGRAPHY</div><div class="eyebrow">Defense in depth</div><h2>Signature, encryption and mTLS are complementary</h2>
+    <div class="grid g3"><div class="card"><div class="icon">✍</div><h3>Digital signature</h3><p>Authenticates the message creator and protects the complete business payload from modification.</p><span class="pill">JWS or CMS</span></div><div class="card"><div class="icon">▣</div><h3>Message encryption</h3><p>Provides confidentiality for the signed payload and protects financial content beyond the TLS hop.</p><span class="pill">JWE or CMS</span></div><div class="card"><div class="icon">⇄</div><h3>Mutual TLS</h3><p>Authenticates both network endpoints and protects the transport connection.</p><span class="pill">TLS 1.2+; 1.3 preferred</span></div></div>
+    <div class="callout danger" style="margin-top:25px"><strong>Fail closed:</strong> missing, invalid, expired, revoked, wrong-purpose or untrusted signatures/certificates must stop processing.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">KEY OWNERSHIP</div><div class="eyebrow">Certificate exchange model</div><h2>Private keys never cross the boundary</h2>
+    <table><thead><tr><th>Direction</th><th>Signer</th><th>Encryption recipient</th><th>Verification / decryption</th></tr></thead><tbody><tr><td>APS → ACSS</td><td>APS private signing key</td><td>ACSS public encryption certificate</td><td>ACSS decrypts privately; verifies with APS public signing certificate</td></tr><tr><td>ACSS → APS</td><td>ACSS private signing key</td><td>APS public encryption certificate</td><td>APS decrypts privately; verifies with ACSS public signing certificate</td></tr></tbody></table>
+    <div class="grid g3" style="margin-top:20px"><div class="card tint"><h3>Separate keys</h3><p>Prefer distinct certificates for signing and encryption.</p></div><div class="card tint"><h3>Key registry</h3><p>Track owner, purpose, status, activation, expiry and revocation.</p></div><div class="card tint"><h3>Out-of-band proof</h3><p>Verify SHA-256 fingerprints through a separately authenticated channel.</p></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">SECURITY CONTROLS</div><div class="eyebrow">Production baseline</div><h2>Controls required before go-live</h2>
+    <div class="grid g2"><ul class="checklist card"><li>Approved algorithms, serialization and canonical byte representation</li><li>HSM or approved key-management service for private keys</li><li>Certificate chain, validity, usage and revocation checks</li><li>Trust-store governance and expiry monitoring</li><li>Planned and emergency key rollover procedures</li></ul><ul class="checklist card"><li>Unique request ID, timestamps, expiry window and replay cache</li><li>Network allowlisting where appropriate</li><li>Least privilege and separated UAT/production secrets</li><li>Access-controlled audit evidence and monitoring</li><li>Incident response and key-compromise playbook</li></ul></div>
+    <div class="callout danger" style="margin-top:16px">Never log private keys, credentials, plaintext financial payloads or decrypted sensitive fields in general application logs.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">IDEMPOTENCY</div><div class="eyebrow">Safe retries</div><h2>A timeout must not create a second posting</h2>
+    <div class="flow"><div class="node"><strong>Submit</strong><span>Stable financialMessageId</span></div><div class="node"><strong>Timeout</strong><span>Outcome is unknown—not failed</span></div><div class="node"><strong>Query / retry</strong><span>Reuse same IDs and payload</span></div><div class="node"><strong>Deduplicate</strong><span>ACSS returns prior result</span></div><div class="node"><strong>Reconcile</strong><span>Exactly one trusted outcome</span></div></div>
+    <div class="g2 grid" style="margin-top:27px"><div class="card tint"><h3>Same ID + same payload</h3><p>Return the previously stored result without applying the entry again.</p></div><div class="card" style="border-color:#f2c5cc"><h3>Same ID + different payload</h3><p>Reject as a conflict and escalate for investigation.</p></div></div>
+    <p class="small muted">ACSS should persist request digests and results. A batch ID must not be reused for materially different content.</p>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">RECONCILIATION</div><div class="eyebrow">Completeness controls</div><h2>Submitted set must equal returned set</h2>
+    <div class="two-col"><div><p class="kpi">Request IDs = Response IDs</p><ul class="checklist"><li>Exactly one result for each submitted ID</li><li>No missing IDs</li><li>No duplicate results</li><li>No unexpected IDs</li><li>All echoed financial fields match</li><li>Totals agree by currency and direction</li></ul></div><div class="card dark"><h3>Quarantine conditions</h3><ul class="no"><li>Signature verification failure</li><li>Unknown or expired signing key</li><li>Batch reference mismatch</li><li>Altered amount, currency or direction</li><li>Partial, duplicate or foreign results</li><li>Replay outside the permitted window</li></ul></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">VALIDATION</div><div class="eyebrow">Business rules</div><h2>Validate before financial processing</h2>
+    <table><thead><tr><th>Control</th><th>Expected behavior</th></tr></thead><tbody><tr><td>Required fields</td><td>Reject incomplete records with a field-level reason where supported</td></tr><tr><td>Enumerations</td><td>DEBIT/CREDIT for direction; ACP/RJC for outcome</td></tr><tr><td>Amount & currency</td><td>Valid decimal, agreed scale, no binary floating-point implementation</td></tr><tr><td>Batch consistency</td><td>One batch ID and business date unless multi-batch is explicitly approved</td></tr><tr><td>Institution identity</td><td>Code and BIN map to an active, authorized institution</td></tr><tr><td>Uniqueness</td><td>financialMessageId is unique and immutable</td></tr><tr><td>Response completeness</td><td>Exactly one matching result for every submitted record</td></tr><tr><td>Control totals</td><td>Debit/credit totals by currency follow jointly agreed calculation rules</td></tr></tbody></table>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">AUDITABILITY</div><div class="eyebrow">Evidence without exposure</div><h2>Operational and audit record</h2>
+    <div class="grid g4"><div class="card"><h3>Identity</h3><p>requestId, batchId, message IDs and source/recipient.</p></div><div class="card"><h3>Timing</h3><p>Submitted, received, processed and finalized timestamps.</p></div><div class="card"><h3>Controls</h3><p>Message digest, key IDs and certificate fingerprint reference.</p></div><div class="card"><h3>Business</h3><p>Counts and totals by currency, direction and final status.</p></div></div>
+    <div class="g2 grid" style="margin-top:22px"><div class="card tint"><h3>Monitor</h3><ul><li>Latency and availability</li><li>Signature/decryption failures</li><li>Duplicate/conflict rates</li><li>Missing and rejected outcomes</li></ul></div><div class="card tint"><h3>Operate</h3><ul><li>Maintenance communication</li><li>Escalation contacts and severity model</li><li>Retention and evidence-access policy</li><li>Recovery and reconciliation runbooks</li></ul></div></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">UAT</div><div class="eyebrow">Test strategy</div><h2>Prove the happy path—and every failure gate</h2>
+    <div class="grid g3"><div class="card tint"><h3>Functional</h3><ul><li>Valid AFN and USD records</li><li>Mixed ACP/RJC results</li><li>Partial batch rejection</li><li>Sync and async completion</li></ul></div><div class="card"><h3>Security</h3><ul><li>Invalid/tampered signature</li><li>Wrong recipient certificate</li><li>Expired/revoked certificate</li><li>Replay and expired message</li></ul></div><div class="card"><h3>Resilience</h3><ul><li>Timeout and safe retry</li><li>Duplicate IDs</li><li>Payload/rate limits</li><li>ACSS outage and recovery</li></ul></div></div>
+    <div class="callout success" style="margin-top:22px"><strong>Exit evidence:</strong> reconciled request/response IDs, values, statuses, timestamps, signatures and control totals.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">DECISIONS</div><div class="eyebrow">ACSS confirmation required</div><h2>Ten decisions needed to finalize the contract</h2>
+    <div class="grid g2"><ol><li>UAT/production URLs and endpoint paths</li><li>Meaning, source and format of “BIN”</li><li>Canonical institution and batch mappings</li><li>Synchronous vs asynchronous processing</li><li>Exact ACP lifecycle meaning and RJC code catalog</li></ol><ol start="6"><li>JWS/JWE or CMS profile and algorithms</li><li>Certificate exchange, fingerprints and trust model</li><li>mTLS, allowlisting, rotation and revocation</li><li>Idempotency, retry, timeout, rate and batch limits</li><li>Control totals, precision, cutoff and business-date rules</li></ol></div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">ACCEPTANCE</div><div class="eyebrow">Definition of done</div><h2>Joint acceptance criteria</h2>
+    <div class="g2 grid"><ul class="checklist card"><li>APS submits a protected multi-record batch</li><li>ACSS decrypts and verifies the APS signature</li><li>ACSS returns a signed and encrypted response</li><li>APS decrypts and verifies before status updates</li></ul><ul class="checklist card"><li>Every ID receives exactly one ACP or RJC result</li><li>Every RJC includes an approved reason code</li><li>Retries cannot create duplicate posting</li><li>Tampering, invalid certificates and replay fail closed</li></ul></div>
+    <div class="callout success" style="margin-top:22px"><strong>Mandatory gate:</strong> no message is processed or trusted until its digital signature has been successfully verified.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">DELIVERY</div><div class="eyebrow">Proposed path to UAT</div><h2>From draft to tested integration</h2>
+    <div class="timeline"><div class="phase"><b>1 · ALIGN</b><h3>Contract workshop</h3><p>Resolve fields, statuses, endpoints, limits and processing mode.</p></div><div class="phase"><b>2 · PROFILE</b><h3>Security approval</h3><p>Choose algorithms, certificates, media type and trust controls.</p></div><div class="phase"><b>3 · BUILD</b><h3>Implement adapters</h3><p>Schema validation, cryptography, idempotency and audit.</p></div><div class="phase"><b>4 · TEST</b><h3>Joint UAT</h3><p>Functional, security, resilience and reconciliation scenarios.</p></div><div class="phase"><b>5 · RELEASE</b><h3>Go-live readiness</h3><p>Runbooks, monitoring, keys, support and signed approval.</p></div></div>
+    <div class="callout" style="margin-top:28px"><strong>Recommended next meeting output:</strong> an approved decision log and a versioned OpenAPI/security-profile package.</div>
+  </section>
+
+  <section class="slide"><div class="topline"></div><div class="brand">KEY TERMS</div><div class="eyebrow">Shared vocabulary</div><h2>Terms that must mean the same thing to both teams</h2>
+    <div class="grid g4"><div class="card"><h3>JWS</h3><p>Standard signed-message format.</p></div><div class="card"><h3>JWE</h3><p>Standard encrypted-message envelope.</p></div><div class="card"><h3>mTLS</h3><p>Mutual certificate authentication at transport.</p></div><div class="card"><h3>Key ID</h3><p>Non-secret selector for an approved key.</p></div><div class="card"><h3>Message ID</h3><p>Unique identity of one financial record.</p></div><div class="card"><h3>Batch ID</h3><p>Shared identity of grouped records.</p></div><div class="card"><h3>Idempotency</h3><p>Same request cannot post twice.</p></div><div class="card"><h3>Reconciliation</h3><p>Request and result sets match exactly.</p></div></div>
+  </section>
+
+  <section class="slide title-slide"><div class="topline"></div><div class="eyebrow">APS ↔ ACSS</div><h1>Secure settlement starts<br>with a contract both<br>systems can prove.</h1><div class="divider"></div><p class="lead">Questions, decisions and joint technical review</p><div class="status"><span class="tag">Version 1.3</span><span class="tag">Draft</span><span class="tag">APS Settlement Engine</span></div><div class="title-mark">THANK YOU</div></section>
+</main>
+<div class="progress" id="progress"></div><div class="controls"><button id="prev" aria-label="Previous slide">←</button><button id="counter">1 / 24</button><button id="next" aria-label="Next slide">→</button><button id="full" aria-label="Fullscreen">⛶</button></div>
+<script>
+  const slides=[...document.querySelectorAll('.slide')];let index=0;
+  slides.forEach((s,i)=>{const f=document.createElement('div');f.className='footer';f.innerHTML=`<span>APS ↔ ACSS Financial Settlement API & Security Integration</span><span>${String(i+1).padStart(2,'0')}</span>`;if(!s.classList.contains('title-slide'))s.appendChild(f)});
+  const show=n=>{index=(n+slides.length)%slides.length;slides.forEach((s,i)=>s.classList.toggle('active',i===index));document.getElementById('counter').textContent=`${index+1} / ${slides.length}`;document.getElementById('progress').style.width=`${(index+1)/slides.length*100}%`;history.replaceState(null,'',`#${index+1}`)};
+  document.getElementById('prev').onclick=()=>show(index-1);document.getElementById('next').onclick=()=>show(index+1);document.getElementById('full').onclick=()=>document.documentElement.requestFullscreen?.();
+  addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key))show(index+1);if(['ArrowLeft','PageUp'].includes(e.key))show(index-1);if(e.key==='Home')show(0);if(e.key==='End')show(slides.length-1);if(e.key.toLowerCase()==='f')document.documentElement.requestFullscreen?.()});
+  let x=0;addEventListener('touchstart',e=>x=e.touches[0].clientX);addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-x;if(Math.abs(d)>45)show(index+(d<0?1:-1))});
+  const requested=parseInt(location.hash.slice(1),10);show(Number.isFinite(requested)?requested-1:0);
+</script>
+</body>
+</html>

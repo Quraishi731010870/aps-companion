@@ -1,0 +1,13 @@
+{
+  "uid": "afghanpay-transactions",
+  "title": "Afghan EMI — Transactions",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-30d", "to": "now" },
+  "panels": [
+    { "id": 1, "type": "bargauge", "title": "Transactions by Status", "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }, "targets": [{ "expr": "afghanpay_transactions_total_by_status", "legendFormat": "{{status}}" }] },
+    { "id": 2, "type": "piechart", "title": "Status Distribution", "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }, "targets": [{ "expr": "afghanpay_transactions_total_by_status", "legendFormat": "{{status}}" }] },
+    { "id": 3, "type": "timeseries", "title": "Transaction Amount by Currency and Status", "gridPos": { "x": 0, "y": 8, "w": 24, "h": 9 }, "targets": [{ "expr": "afghanpay_transaction_amount_total", "legendFormat": "{{currency}} / {{status}}" }] }
+  ]
+}

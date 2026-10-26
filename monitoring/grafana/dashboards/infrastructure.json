@@ -1,0 +1,14 @@
+{
+  "uid": "afghanpay-infrastructure",
+  "title": "Afghan EMI — Infrastructure",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    { "id": 1, "type": "stat", "title": "PostgreSQL", "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }, "targets": [{ "expr": "up{job=\"postgres\"}", "legendFormat": "PostgreSQL" }] },
+    { "id": 2, "type": "stat", "title": "Redis", "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 }, "targets": [{ "expr": "up{job=\"redis\"}", "legendFormat": "Redis" }] },
+    { "id": 3, "type": "timeseries", "title": "Backend Memory", "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 }, "targets": [{ "expr": "afghanpay_process_process_resident_memory_bytes", "legendFormat": "resident" }] },
+    { "id": 4, "type": "timeseries", "title": "Host CPU", "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 }, "targets": [{ "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))", "legendFormat": "CPU" }] }
+  ]
+}

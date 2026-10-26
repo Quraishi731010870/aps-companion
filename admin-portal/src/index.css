@@ -1,0 +1,6 @@
+* { box-sizing: border-box; }
+:root { font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; color: #18292f; background: #f4f7f8; }
+html, body, #root { min-width: 360px; min-height: 100%; margin: 0; }
+body { min-height: 100vh; }
+a { color: inherit; }
+button, input { font: inherit; }

@@ -1,0 +1,12 @@
+import { useState } from 'react'
+import { Alert, Box, Chip, MenuItem, Paper, Select, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { adminApi } from '../api/adminApi'
+
+export function UsersPage() {
+  const [search, setSearch] = useState('')
+  const client = useQueryClient()
+  const query = useQuery({ queryKey: ['users', search], queryFn: () => adminApi.listUsers(0, search) })
+  const status = useMutation({ mutationFn: ({ id, value }: { id: string; value: string }) => adminApi.updateUserStatus(id, value), onSuccess: () => void client.invalidateQueries({ queryKey: ['users'] }) })
+  return <><Box className="page-heading"><Box><Typography variant="overline">SECURITY / ACCESS</Typography><Typography variant="h4">Users and administrators</Typography><Typography color="text.secondary">Backend-authorized identities, roles, and account status.</Typography></Box></Box><Paper className="panel filter-panel" elevation={0}><TextField size="small" fullWidth label="Search by name, email, or phone" value={search} onChange={event => setSearch(event.target.value)} /></Paper>{query.isPending ? <Skeleton variant="rounded" height={320} /> : query.isError ? <Alert severity="error">Users could not be loaded.</Alert> : <Paper className="table-panel" elevation={0}><Table size="small"><TableHead><TableRow><TableCell>User</TableCell><TableCell>Type</TableCell><TableCell>Roles</TableCell><TableCell>Created</TableCell><TableCell>Status</TableCell></TableRow></TableHead><TableBody>{query.data.items.map(user => <TableRow key={user.id}><TableCell><Typography variant="body2" fontWeight={700}>{user.displayName}</Typography><Typography variant="caption" color="text.secondary">{user.email ?? user.phone ?? user.id}</Typography></TableCell><TableCell>{user.principalType}</TableCell><TableCell><Stack direction="row" spacing={.5}>{user.roles.map(item => <Chip key={item.role.code} size="small" variant="outlined" label={item.role.name} />)}</Stack></TableCell><TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell><TableCell><Select size="small" value={user.status} disabled={status.isPending} onChange={event => status.mutate({ id: user.id, value: event.target.value })}>{['ACTIVE', 'PENDING', 'LOCKED', 'DISABLED'].map(value => <MenuItem key={value} value={value}>{value}</MenuItem>)}</Select></TableCell></TableRow>)}</TableBody></Table></Paper>}</>
+}
