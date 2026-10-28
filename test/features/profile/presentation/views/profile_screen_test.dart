@@ -1,3 +1,4 @@
+import 'package:afghan_emi/src/features/auth/presentation/view_models/current_user.dart';
 import 'package:afghan_emi/src/features/profile/presentation/views/profile_screen.dart';
 import 'package:afghan_emi/src/features/settings/data/biometric_authenticator.dart';
 import 'package:afghan_emi/src/features/settings/domain/biometric_outcome.dart';
@@ -76,5 +77,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_switchValue(tester), isFalse);
+  });
+
+  testWidgets('shows the signed-in user without the demo phone number', (
+    tester,
+  ) async {
+    useTallScreen(tester);
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      overrides: [
+        currentUserProvider.overrideWith(
+          (ref) async => FakeAuthRepository.testUser,
+        ),
+      ],
+    );
+
+    expect(find.text('Demo Customer 001'), findsOneWidget);
+    expect(find.text('DC'), findsOneWidget);
+    expect(find.text('+93 731010870'), findsNothing);
   });
 }

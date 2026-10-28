@@ -1,4 +1,6 @@
 import 'package:afghan_emi/src/core/remote_config/state/mobile_config.dart';
+import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
+import 'package:afghan_emi/src/features/auth/presentation/view_models/current_user.dart';
 import 'package:afghan_emi/src/features/payments/presentation/view_models/linked_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,5 +78,25 @@ void main() {
     expect(find.text('APS card  •••• 1234'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     expect(find.text('No card linked'), findsNothing);
+  });
+
+  testWidgets('greets the signed-in user by name', (tester) async {
+    await pumpApp(
+      tester,
+      overrides: [
+        currentUserProvider.overrideWith(
+          (ref) async => FakeAuthRepository.testUser,
+        ),
+      ],
+    );
+
+    expect(find.text('Demo Customer 001'), findsOneWidget);
+    expect(find.text('Asif Quraishi'), findsNothing);
+  });
+
+  testWidgets('offline mock mode greets the demo user', (tester) async {
+    await pumpApp(tester);
+
+    expect(find.text(UserProfile.demo.displayName), findsOneWidget);
   });
 }

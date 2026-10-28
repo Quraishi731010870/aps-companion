@@ -1,10 +1,13 @@
 import 'dart:convert';
 
 import 'package:afghan_emi/src/core/network/api_client.dart';
+import 'package:afghan_emi/src/core/storage/secure_store.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+import '../../helpers/test_app.dart';
 
 const _base = 'http://api.test';
 
@@ -14,12 +17,15 @@ http.Response _json(Object body, [int status = 200]) =>
 void main() {
   const storage = FlutterSecureStorage();
 
-  setUp(() {
-    FlutterSecureStorage.setMockInitialValues({
-      'afghanpay_access_token': 'old-access',
-      'afghanpay_refresh_token': 'old-refresh',
-    });
-  });
+  setUp(
+    () => mockSecureStorage(
+      values: {
+        SecureKey.accessToken: 'old-access',
+        SecureKey.refreshToken: 'old-refresh',
+        SecureKey.userProfile: '{"id":"user-1","displayName":"Demo"}',
+      },
+    ),
+  );
 
   test('sends the stored bearer token and decodes the body', () async {
     late http.Request sent;
@@ -92,7 +98,7 @@ void main() {
     expect(await storage.read(key: 'afghanpay_refresh_token'), 'new-r');
   });
 
-  test('a rejected refresh clears the stored tokens', () async {
+  test('a rejected refresh clears the whole stored session', () async {
     final api = ApiClient(
       baseUrl: _base,
       client: MockClient((request) async => http.Response('', 401)),
@@ -102,6 +108,8 @@ void main() {
 
     expect(await api.hasAccessToken(), isFalse);
     expect(await storage.read(key: 'afghanpay_refresh_token'), isNull);
+    // The stored user goes with the session.
+    expect(await storage.read(key: SecureKey.userProfile.storageKey), isNull);
   });
 
   test('parallel 401s share a single refresh call', () async {

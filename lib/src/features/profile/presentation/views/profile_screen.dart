@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../admin/presentation/views/google_sheets_screen.dart';
 import '../../../admin/presentation/views/management_screen.dart';
+import '../../../auth/domain/user_profile.dart';
+import '../../../auth/presentation/view_models/current_user.dart';
 import '../../../settings/domain/biometric_outcome.dart';
 import '../../../settings/presentation/view_models/settings.dart';
 import '../../../settings/presentation/views/limits_screen.dart';
@@ -32,47 +34,7 @@ class ProfileScreen extends ConsumerWidget {
                 ?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 18),
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 31,
-                    backgroundColor: Color(0xffd9efe9),
-                    child: Text(
-                      'AQ',
-                      style: TextStyle(
-                        color: Color(0xff087f67),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 19,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Asif Quraishi',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          '+93 731010870',
-                          style: TextStyle(color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.edit_outlined),
-                ],
-              ),
-            ),
-          ),
+          const _ProfileCard(),
           const SizedBox(height: 14),
           Card(
             child: ListTile(
@@ -286,6 +248,60 @@ class ProfileScreen extends ConsumerWidget {
     if (message == null) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(context.tr(message))));
+  }
+}
+
+class _ProfileCard extends ConsumerWidget {
+  const _ProfileCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(displayedUserProvider);
+    final primary = Theme.of(context).colorScheme.primary;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 31,
+              backgroundColor: const Color(0xffd9efe9),
+              child: Text(
+                user.initials,
+                style: TextStyle(
+                  color: primary,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 19,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.displayName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  // The phone number is not stored on the device; only the
+                  // offline demo shows a sample one.
+                  if (user == UserProfile.demo)
+                    const Text(
+                      '+93 731010870',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(Icons.edit_outlined),
+          ],
+        ),
+      ),
+    );
   }
 }
 

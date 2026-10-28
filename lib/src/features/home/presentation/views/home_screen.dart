@@ -5,6 +5,7 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/widgets/async_views.dart';
 import '../../../activity/presentation/view_models/activities.dart';
 import '../../../activity/presentation/widgets/activity_tile.dart';
+import '../../../auth/presentation/view_models/current_user.dart';
 import '../../../payments/presentation/view_models/enabled_operations.dart';
 import '../../../payments/domain/payment_transaction.dart';
 import '../../../payments/presentation/view_models/linked_card.dart';
@@ -51,6 +52,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final linkedCard = ref.watch(linkedCardProvider);
+    final userName = ref.watch(
+      displayedUserProvider.select((user) => user.displayName),
+    );
     final operations = ref.watch(enabledOperationsProvider);
     return SafeArea(
       child: ListView(
@@ -81,8 +85,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       style: const TextStyle(color: Colors.black54),
                     ),
                     Text(
-                      'Asif Quraishi',
-                      style: TextStyle(
+                      userName,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
