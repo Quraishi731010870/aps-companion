@@ -193,4 +193,6 @@ const _dari = <String, String>{
   'Password changed successfully': 'رمز عبور با موفقیت تغییر کرد',
   'Enter valid limits; monthly must be at least daily.':
       'محدودیت‌های معتبر وارد کنید؛ ماهانه باید حداقل برابر روزانه باشد.',
+  'Could not sign in to the PayAfghan server.':
+      'ورود به سرور پی‌افغان ممکن نشد.',
 };

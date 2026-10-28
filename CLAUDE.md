@@ -21,6 +21,30 @@ flutter test
 Android emulator reaches the local API at `http://10.0.2.2:8081`; browser/desktop use
 `http://localhost:8081`; the iOS simulator also uses `http://localhost:8081`.
 
+### Testing against the local backend (test user)
+
+There is no sign-in screen yet. Debug builds sign in automatically as the seeded test
+user (**Demo Customer 001**) when `dart_defines.local.json` (git-ignored) contains:
+
+```json
+{
+  "API_BASE_URL": "http://localhost:8081",
+  "TEST_USER_PHONE": "<SEED_MOBILE_PHONE from .env>",
+  "TEST_USER_PASSWORD": "<SEED_MOBILE_PASSWORD from .env>"
+}
+```
+
+1. `docker compose up -d postgres redis backend` (seed once; see `DEPLOYMENT.md`).
+2. `flutter run --dart-define-from-file=dart_defines.local.json`
+   (web: add `-d web-server --web-port 8090`; that origin is allowed in `docker-compose.yml`).
+   In VS Code, pick **aps-companion (local backend)** or **(local backend, web :8090)** from
+   Run and Debug; `.vscode/launch.json` (git-ignored, per developer) passes the same flag.
+   **(offline mock)** runs with no defines and the mock gateway.
+
+Release builds ignore `TEST_USER_*` even if passed. Sign-in is never retried
+automatically: 5 wrong passwords lock the account for 15 minutes. Payments stay
+`PENDING` because no processor runs locally.
+
 ## Engineering principles (apply to every change)
 
 - **MVVM:** View = `presentation/views/` and `presentation/widgets/` (render state,
@@ -72,6 +96,7 @@ lib/
 
 | Feature | Owns |
 |---|---|
+| `auth` | `SessionStatus`, `AuthRepository` (login + token storage), `Session` view model, `SessionGate` |
 | `payments` | `PaymentOperation`/`PaymentRequest`/`PaymentResult`, `PaymentGateway` + backend/mock/Sheets gateways, idempotency keys, card numbers, payment flow, card linking, QR scanner, receipt |
 | `activity` | Wallet history, CSV export, `ActivityTile` |
 | `home` | Home dashboard |
@@ -158,6 +183,8 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `activitiesProvider` | `features/activity/presentation/view_models` | Wallet history (invalidated after each payment) |
 | `biometricAuthenticatorProvider` | `features/settings/data` | Platform biometric check |
 | `settingsProvider` | `features/settings/presentation/view_models` | Language, biometric flag, transaction limits |
+| `authRepositoryProvider` | `features/auth/data` | Mobile login; stores tokens via `ApiClient` |
+| `sessionProvider` | `features/auth/presentation/view_models` | Signed in / out; auto-signs in the test user in debug builds; no auto-retry |
 
 `context.tr()` reads the locale from `Localizations`, so it needs no provider.
 
