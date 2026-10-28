@@ -1,13 +1,14 @@
-import 'package:afghan_emi/src/app.dart';
-import 'package:afghan_emi/src/domain/wallet_identity.dart';
+import 'package:afghan_emi/src/features/profile/domain/wallet_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/test_app.dart';
 
 void main() {
   testWidgets('renders the wallet dashboard and transaction services', (
     tester,
   ) async {
-    await tester.pumpWidget(const AfghanEmiApp());
+    await pumpApp(tester);
 
     expect(find.text('Available balance'), findsOneWidget);
     expect(find.text('Transaction services'), findsOneWidget);
@@ -18,7 +19,7 @@ void main() {
   testWidgets('profile opens a receive QR for the wallet identifier', (
     tester,
   ) async {
-    await tester.pumpWidget(const AfghanEmiApp());
+    await pumpApp(tester);
     await tester.tap(find.text('Profile').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('My wallet QR'));
@@ -32,7 +33,7 @@ void main() {
   testWidgets('Google Sheets clearly reports missing build configuration', (
     tester,
   ) async {
-    await tester.pumpWidget(const AfghanEmiApp());
+    await pumpApp(tester);
     await tester.tap(find.text('Profile').last);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
