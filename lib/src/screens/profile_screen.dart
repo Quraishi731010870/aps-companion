@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_localizations.dart';
+import '../data/biometric_authenticator.dart';
 import '../domain/wallet_identity.dart';
-import '../state/app_state.dart';
+import '../l10n/app_localizations.dart';
+import '../state/settings.dart';
 import 'limits_screen.dart';
 import 'management_screen.dart';
 import 'google_sheets_screen.dart';
 import 'security_screen.dart';
 import 'wallet_qr_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final authentication = LocalAuthentication();
   @override
-  Widget build(BuildContext context) {
-    final state = AppScope.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final biometricEnabled = ref.watch(
+      settingsProvider.select((settings) => settings.biometricEnabled),
+    );
+    final languageCode = ref.watch(
+      settingsProvider.select((settings) => settings.languageCode),
+    );
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(18),
@@ -146,8 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: Text(
                     context.tr('Fingerprint or face authentication'),
                   ),
-                  value: state.biometricEnabled,
-                  onChanged: (value) => _setBiometric(state, value),
+                  value: biometricEnabled,
+                  onChanged: (value) => _setBiometric(context, ref, value),
                 ),
                 const Divider(height: 1, indent: 64),
                 _Setting(
@@ -178,15 +179,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     context.tr('Language'),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  subtitle: Text(state.isDari ? 'دری' : 'English'),
+                  subtitle: Text(languageCode == 'fa' ? 'دری' : 'English'),
                   trailing: DropdownButton<String>(
                     underline: const SizedBox(),
-                    value: state.locale.languageCode,
+                    value: languageCode,
                     items: const [
                       DropdownMenuItem(value: 'en', child: Text('EN')),
                       DropdownMenuItem(value: 'fa', child: Text('دری')),
                     ],
-                    onChanged: (value) => state.setLanguage(value!),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      ref.read(settingsProvider.notifier).setLanguage(value);
+                    },
                   ),
                 ),
                 const Divider(height: 1, indent: 64),
@@ -259,37 +263,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _setBiometric(AppState state, bool value) async {
-    if (!value) {
-      state.setBiometric(false);
+  Future<void> _setBiometric(
+    BuildContext context,
+    WidgetRef ref,
+    bool enable,
+  ) async {
+    final settings = ref.read(settingsProvider.notifier);
+    if (!enable) {
+      settings.disableBiometric();
       return;
     }
-    try {
-      final supported = await authentication.isDeviceSupported();
-      final available = await authentication.canCheckBiometrics;
-      if (!supported || !available) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No biometric authentication is enrolled on this device.',
-            ),
-          ),
-        );
-        return;
-      }
-      final verified = await authentication.authenticate(
-        localizedReason: 'Verify your identity to enable biometric login',
-        biometricOnly: true,
-        persistAcrossBackgrounding: true,
-      );
-      if (verified) state.setBiometric(true);
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Biometric authentication unavailable: $error')),
-      );
-    }
+    final outcome = await settings.enableBiometric(
+      context.tr('Verify your identity to enable biometric login'),
+    );
+    if (!context.mounted) return;
+    final message = switch (outcome) {
+      BiometricOutcome.verified => null,
+      BiometricOutcome.cancelled => null,
+      BiometricOutcome.unavailable =>
+        'Biometric authentication is not available on this device.',
+    };
+    if (message == null) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(context.tr(message))));
   }
 }
 

@@ -12,7 +12,7 @@ flutter pub get
 flutter run                                                     # mock gateway, no backend
 flutter run --dart-define-from-file=dart_defines.local.json     # real API (file is git-ignored)
 flutter run -d web-server --web-port 8090                       # quick browser check
-dart run build_runner watch -d                                  # regenerate Riverpod *.g.dart files
+dart run build_runner watch                                     # regenerate Riverpod *.g.dart files
 flutter analyze                                                 # must be clean
 dart format lib test                                            # must produce no changes
 flutter test
@@ -21,10 +21,33 @@ flutter test
 Android emulator reaches the local API at `http://10.0.2.2:8081`; browser/desktop use
 `http://localhost:8081`; the iOS simulator also uses `http://localhost:8081`.
 
+## Engineering principles (apply to every change)
+
+- **MVVM:** View = widgets in `screens/` and `widgets/` (render state, forward user
+  input, nothing else). ViewModel = Riverpod `Notifier`/`AsyncNotifier` in `state/`.
+  Model = `domain/` (entities, rules) plus `repositories/`, `data/` and `network/`.
+  Views talk only to ViewModels; ViewModels reach data only through providers.
+- **DRY / reuse first:** before writing a widget, helper, formatter, provider or model,
+  search for an existing one and reuse or extend it. Shared UI goes in `widgets/`
+  (e.g. `ActivityTile`, `LoadingView`, `ErrorRetryView`); shared rules go in `domain/`
+  (e.g. `CardNumber`, `TransactionLimits`, `IdempotencyKey`).
+- **SOLID:** one responsibility per class and file; depend on abstractions
+  (`PaymentGateway`, `BiometricAuthenticator`) injected through providers; add new
+  behaviour by adding an implementation, not by editing callers.
+- **Separation of concerns:** no HTTP, storage or platform plugins in widgets; no
+  `BuildContext` in ViewModels; `domain/` has no Riverpod and no I/O.
+- **No memory leaks:** every controller, `FocusNode`, subscription, `Timer`, socket and
+  `http.Client` is disposed by its owner (`State.dispose` or `ref.onDispose`). Dialogs and
+  sheets that need controllers are their own `StatefulWidget` so the controllers live
+  exactly as long as the route.
+- **Smoothness:** `const` widgets, `select` for narrow rebuilds, lazy lists
+  (`ListView.builder` / `SliverList`), nothing heavy in `build` or on the UI isolate.
+
 ## Project structure (`lib/src/`)
 
 | Folder | Holds |
 |---|---|
+| `config/` | `AppEnvironment` (the only place `--dart-define` values are read) and its provider. |
 | `domain/` | Immutable models and enums (`PaymentOperation`, `PaymentRequest`, `WalletActivity`). No Flutter widgets, no I/O, no Riverpod. |
 | `data/` | `PaymentGateway` implementations (`BackendPaymentGateway`, `MockPaymentGateway`, `GoogleSheetsGateway`) and the provider that exposes them. |
 | `network/` | `ApiClient` (HTTP + token refresh), `ConfigSyncService` (Socket.IO `/realtime`) and their providers. |
@@ -46,7 +69,9 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 
 ### Setup
 - Packages: `flutter_riverpod`, `riverpod_annotation`; dev: `riverpod_generator`,
-  `build_runner`, `riverpod_lint`, `custom_lint`.
+  `build_runner`. `riverpod_lint` runs as an analyzer plugin declared under `plugins:`
+  in `analysis_options.yaml` (not a pubspec dependency; `custom_lint` is incompatible
+  with the current generator).
 - `main.dart` wraps the app in `ProviderScope`; nothing else creates a root container.
 - Write providers with code generation (`@riverpod` / `@Riverpod(keepAlive: true)`) and add
   `part 'file_name.g.dart';`. Commit the generated `*.g.dart` files.
@@ -89,11 +114,21 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 - Providers depend on each other through `ref.watch` in `build`; never pass a `ref` around
   or store it in a long-lived object.
 
-### Migrating existing code
-`AppState` / `AppScope` (`lib/src/state/app_state.dart`) is legacy. All new code uses Riverpod.
-When you change a screen that reads `AppScope.of(context)`, move the state it needs into a
-notifier (e.g. `AppSettings` for locale/biometric/limits, `MobileConfigNotifier` for
-remote config) rather than adding to `AppState`. Delete `AppState` once nothing uses it.
+### Existing providers (reuse these)
+| Provider | Layer | Purpose |
+|---|---|---|
+| `appEnvironmentProvider` | config | Build-time `--dart-define` values; override in tests |
+| `apiClientProvider`, `configSyncServiceProvider` | network | HTTP client and live config socket |
+| `configRepositoryProvider` | repositories | Remote config with offline cache |
+| `paymentGatewayProvider` | data | Chooses backend / Sheets / mock gateway |
+| `biometricAuthenticatorProvider` | data | Platform biometric check |
+| `settingsProvider` | state | Language, biometric flag, transaction limits |
+| `mobileConfigProvider`, `currentConfigProvider`, `enabledOperationsProvider` | state | Remote config and the feature-flagged operation list |
+| `linkedCardProvider` | state | Masked linked-card label |
+| `activitiesProvider` | state | Wallet history (invalidated after each payment) |
+| `paymentSubmissionProvider` | state | Submits a payment; double-tap guard; reuses the idempotency key on retry |
+
+`context.tr()` reads the locale from `Localizations`, so it needs no provider.
 
 ---
 

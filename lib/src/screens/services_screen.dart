@@ -1,28 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/mock_payment_gateway.dart';
-import '../domain/payment_transaction.dart';
 import '../l10n/app_localizations.dart';
+import '../state/mobile_config.dart';
 import '../widgets/payment_flow.dart';
-import '../state/app_state.dart';
 
-class ServicesScreen extends StatefulWidget {
-  const ServicesScreen({super.key, required this.gateway});
-  final PaymentGateway gateway;
+class ServicesScreen extends ConsumerStatefulWidget {
+  const ServicesScreen({super.key});
   @override
-  State<ServicesScreen> createState() => _ServicesScreenState();
+  ConsumerState<ServicesScreen> createState() => _ServicesScreenState();
 }
 
-class _ServicesScreenState extends State<ServicesScreen> {
+class _ServicesScreenState extends ConsumerState<ServicesScreen> {
   String query = '';
   @override
   Widget build(BuildContext context) {
-    final operations = PaymentOperation.values
-        .where(
-          (item) =>
-              AppScope.of(context)
-                  .featureEnabled(item.configurationKey, safeDefault: true),
-        )
+    final operations = ref
+        .watch(enabledOperationsProvider)
         .where(
           (item) => '${item.label} ${item.code}'.toLowerCase().contains(
             query.toLowerCase(),
@@ -60,7 +54,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               itemBuilder: (context, index) {
                 final item = operations[index];
                 return ListTile(
-                  onTap: () => openPaymentFlow(context, widget.gateway, item),
+                  onTap: () => openPaymentFlow(context, item),
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xffe7f3ef),
                     child: Icon(item.icon, color: const Color(0xff087f67)),

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../domain/payment_transaction.dart';
-import 'mock_payment_gateway.dart';
+import '../domain/payment_gateway.dart';
 
 class GoogleSheetsGateway implements PaymentGateway {
   GoogleSheetsGateway({
@@ -15,6 +15,8 @@ class GoogleSheetsGateway implements PaymentGateway {
   final String endpoint;
   final String apiKey;
   final http.Client client;
+
+  void dispose() => client.close();
 
   @override
   Future<PaymentResult> execute(PaymentRequest request) async {

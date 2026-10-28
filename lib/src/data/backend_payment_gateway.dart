@@ -1,6 +1,6 @@
+import '../domain/payment_gateway.dart';
 import '../domain/payment_transaction.dart';
 import '../network/api_client.dart';
-import 'mock_payment_gateway.dart';
 
 class BackendPaymentGateway implements PaymentGateway {
   BackendPaymentGateway(this.api);

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock_payment_gateway.dart';
 import '../l10n/app_localizations.dart';
 import 'activity_screen.dart';
 import 'home_screen.dart';
@@ -8,8 +7,7 @@ import 'profile_screen.dart';
 import 'services_screen.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key, required this.gateway});
-  final PaymentGateway gateway;
+  const MainShell({super.key});
   @override
   State<MainShell> createState() => _MainShellState();
 }
@@ -19,12 +17,9 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeScreen(
-        gateway: widget.gateway,
-        onNotificationsPressed: () => setState(() => index = 2),
-      ),
-      ServicesScreen(gateway: widget.gateway),
-      ActivityScreen(gateway: widget.gateway),
+      HomeScreen(onNotificationsPressed: () => setState(() => index = 2)),
+      const ServicesScreen(),
+      const ActivityScreen(),
       const ProfileScreen(),
     ];
     return Scaffold(

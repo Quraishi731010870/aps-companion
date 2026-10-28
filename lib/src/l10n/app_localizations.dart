@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../state/app_state.dart';
-
 extension AppTranslation on BuildContext {
+  /// Translates [english] for the locale `MaterialApp` is showing.
   String tr(String english) {
-    if (!AppScope.of(this).isDari) return english;
+    if (Localizations.localeOf(this).languageCode != 'fa') return english;
     return _dari[english] ?? english;
   }
 }
@@ -176,4 +175,22 @@ const _dari = <String, String>{
   'Limit templates': 'قالب‌های محدودیت',
   'Limit schemes': 'طرح‌های محدودیت',
   'Notification settings': 'تنظیمات اطلاع‌رسانی',
+  'Pending': 'در حال پردازش',
+  'Failed': 'ناموفق',
+  'Reversed': 'برگشت داده شد',
+  'The payment could not be completed. Please try again.':
+      'پرداخت تکمیل نشد. لطفاً دوباره تلاش کنید.',
+  'This PayAfghan QR code is invalid.': 'این کد QR پی‌افغان معتبر نیست.',
+  'Try again': 'تلاش دوباره',
+  'Recent activity could not be loaded.': 'فعالیت‌های اخیر بارگذاری نشد.',
+  'Your activity could not be loaded.': 'فعالیت‌های شما بارگذاری نشد.',
+  'CSV transaction report copied.': 'گزارش CSV تراکنش‌ها کاپی شد.',
+  'Biometric authentication is not available on this device.':
+      'تأیید بایومتریک در این دستگاه در دسترس نیست.',
+  'Verify your identity to enable biometric login':
+      'برای فعال‌سازی ورود بایومتریک هویت خود را تأیید کنید',
+  'PIN changed successfully': 'PIN با موفقیت تغییر کرد',
+  'Password changed successfully': 'رمز عبور با موفقیت تغییر کرد',
+  'Enter valid limits; monthly must be at least daily.':
+      'محدودیت‌های معتبر وارد کنید؛ ماهانه باید حداقل برابر روزانه باشد.',
 };

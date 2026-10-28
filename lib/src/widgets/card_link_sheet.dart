@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/card_number.dart';
 import '../l10n/app_localizations.dart';
-
-/// Prototype-only in-memory card token shared by card linking and payments.
-/// A production app must replace this with a token returned by the card issuer.
-final class LinkedCardStore {
-  LinkedCardStore._();
-
-  static final ValueNotifier<String?> card = ValueNotifier<String?>(null);
-}
+import '../state/linked_card.dart';
 
 Future<String?> showCardLinkSheet(BuildContext context) =>
     showModalBottomSheet<String>(
@@ -19,14 +14,14 @@ Future<String?> showCardLinkSheet(BuildContext context) =>
       builder: (_) => const _CardLinkSheet(),
     );
 
-class _CardLinkSheet extends StatefulWidget {
+class _CardLinkSheet extends ConsumerStatefulWidget {
   const _CardLinkSheet();
 
   @override
-  State<_CardLinkSheet> createState() => _CardLinkSheetState();
+  ConsumerState<_CardLinkSheet> createState() => _CardLinkSheetState();
 }
 
-class _CardLinkSheetState extends State<_CardLinkSheet> {
+class _CardLinkSheetState extends ConsumerState<_CardLinkSheet> {
   final formKey = GlobalKey<FormState>();
   final cardNumber = TextEditingController();
   final expiry = TextEditingController();
@@ -85,12 +80,9 @@ class _CardLinkSheetState extends State<_CardLinkSheet> {
               labelText: context.tr('Card number'),
               prefixIcon: const Icon(Icons.credit_card_rounded),
             ),
-            validator: (value) {
-              final digits = value?.trim() ?? '';
-              return digits.length < 12 || digits.length > 19
-                  ? 'Enter a valid card number'
-                  : null;
-            },
+            validator: (value) => CardNumber.isValid(value ?? '')
+                ? null
+                : 'Enter a valid card number',
           ),
           const SizedBox(height: 13),
           Row(
@@ -139,14 +131,7 @@ class _CardLinkSheetState extends State<_CardLinkSheet> {
           SizedBox(
             height: 52,
             child: FilledButton.icon(
-              onPressed: () {
-                if (!formKey.currentState!.validate()) return;
-                final digits = cardNumber.text;
-                final linkedCard =
-                    'APS card  •••• ${digits.substring(digits.length - 4)}';
-                LinkedCardStore.card.value = linkedCard;
-                Navigator.pop(context, linkedCard);
-              },
+              onPressed: _link,
               icon: const Icon(Icons.link_rounded),
               label: Text(context.tr('Link card')),
             ),
@@ -155,4 +140,10 @@ class _CardLinkSheetState extends State<_CardLinkSheet> {
       ),
     ),
   );
+
+  void _link() {
+    if (!(formKey.currentState?.validate() ?? false)) return;
+    final label = ref.read(linkedCardProvider.notifier).link(cardNumber.text);
+    Navigator.pop(context, label);
+  }
 }

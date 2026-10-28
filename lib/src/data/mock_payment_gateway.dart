@@ -1,11 +1,7 @@
 import 'dart:async';
 
+import '../domain/payment_gateway.dart';
 import '../domain/payment_transaction.dart';
-
-abstract interface class PaymentGateway {
-  Future<PaymentResult> execute(PaymentRequest request);
-  Future<List<WalletActivity>> fetchActivities();
-}
 
 /// Development gateway only. Replace with a regulated, authenticated EMI API.
 class MockPaymentGateway implements PaymentGateway {

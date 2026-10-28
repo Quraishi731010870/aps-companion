@@ -40,119 +40,157 @@ class SecurityScreen extends StatelessWidget {
     ),
   );
 
-  Future<void> _showPinDialog(BuildContext context) async {
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final key = GlobalKey<FormState>();
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.tr('Change PIN')),
-        content: Form(
-          key: key,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _pinField(current, context.tr('Current PIN')),
-              const SizedBox(height: 12),
-              _pinField(next, context.tr('New PIN')),
-            ],
-          ),
+  Future<void> _showPinDialog(BuildContext context) {
+    String? pin(String value, String _) =>
+        value.length == 4 ? null : 'Enter 4 digits';
+    final pinFormatters = [
+      FilteringTextInputFormatter.digitsOnly,
+      LengthLimitingTextInputFormatter(4),
+    ];
+    return _change(
+      context,
+      _TwoFieldDialog(
+        title: 'Change PIN',
+        first: (
+          label: 'Current PIN',
+          keyboard: TextInputType.number,
+          formatters: pinFormatters,
+          validator: pin,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.tr('Cancel')),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (!key.currentState!.validate()) return;
-              Navigator.pop(dialogContext);
-              _saved(context, 'PIN changed successfully');
-            },
-            child: Text(context.tr('Save')),
-          ),
-        ],
+        second: (
+          label: 'New PIN',
+          keyboard: TextInputType.number,
+          formatters: pinFormatters,
+          validator: pin,
+        ),
       ),
+      'PIN changed successfully',
     );
-    current.dispose();
-    next.dispose();
   }
 
-  TextFormField _pinField(TextEditingController controller, String label) =>
-      TextFormField(
-        controller: controller,
-        obscureText: true,
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(4),
-        ],
-        decoration: InputDecoration(labelText: label),
-        validator: (value) => value?.length == 4 ? null : 'Enter 4 digits',
-      );
-
-  Future<void> _showPasswordDialog(BuildContext context) async {
-    final password = TextEditingController();
-    final confirm = TextEditingController();
-    final key = GlobalKey<FormState>();
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.tr('Change password')),
-        content: Form(
-          key: key,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: password,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: context.tr('New password'),
-                ),
-                validator: (value) =>
-                    RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$')
-                        .hasMatch(value ?? '')
-                    ? null
-                    : 'Use 8+ characters, upper/lowercase and a number',
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: confirm,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: context.tr('Confirm password'),
-                ),
-                validator: (value) =>
-                    value == password.text ? null : 'Passwords do not match',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.tr('Cancel')),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (!key.currentState!.validate()) return;
-              Navigator.pop(dialogContext);
-              _saved(context, 'Password changed successfully');
-            },
-            child: Text(context.tr('Save')),
-          ),
-        ],
+  Future<void> _showPasswordDialog(BuildContext context) => _change(
+    context,
+    _TwoFieldDialog(
+      title: 'Change password',
+      first: (
+        label: 'New password',
+        keyboard: TextInputType.visiblePassword,
+        formatters: const [],
+        validator: (value, _) =>
+            RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(value)
+            ? null
+            : 'Use 8+ characters, upper/lowercase and a number',
       ),
+      second: (
+        label: 'Confirm password',
+        keyboard: TextInputType.visiblePassword,
+        formatters: const [],
+        validator: (value, first) =>
+            value == first ? null : 'Passwords do not match',
+      ),
+    ),
+    'Password changed successfully',
+  );
+
+  Future<void> _change(
+    BuildContext context,
+    _TwoFieldDialog dialog,
+    String successMessage,
+  ) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => dialog,
     );
-    password.dispose();
-    confirm.dispose();
+    if (saved != true || !context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(context.tr(successMessage))));
+  }
+}
+
+typedef _FieldSpec = ({
+  String label,
+  TextInputType keyboard,
+  List<TextInputFormatter> formatters,
+
+  /// Receives this field's value and the first field's value.
+  String? Function(String value, String first) validator,
+});
+
+/// Obscured two-field form used for PIN and password changes. Owns its
+/// controllers so they are disposed only after the dialog route is gone.
+class _TwoFieldDialog extends StatefulWidget {
+  const _TwoFieldDialog({
+    required this.title,
+    required this.first,
+    required this.second,
+  });
+  final String title;
+  final _FieldSpec first;
+  final _FieldSpec second;
+
+  @override
+  State<_TwoFieldDialog> createState() => _TwoFieldDialogState();
+}
+
+class _TwoFieldDialogState extends State<_TwoFieldDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _first = TextEditingController();
+  final _second = TextEditingController();
+
+  @override
+  void dispose() {
+    _first.dispose();
+    _second.dispose();
+    super.dispose();
   }
 
-  void _saved(BuildContext context, String message) =>
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(context.tr(widget.title)),
+    content: Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ObscuredField(_first, widget.first, matches: _first),
+          const SizedBox(height: 12),
+          _ObscuredField(_second, widget.second, matches: _first),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context, false),
+        child: Text(context.tr('Cancel')),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (!(_formKey.currentState?.validate() ?? false)) return;
+          Navigator.pop(context, true);
+        },
+        child: Text(context.tr('Save')),
+      ),
+    ],
+  );
+}
+
+class _ObscuredField extends StatelessWidget {
+  const _ObscuredField(this.controller, this.spec, {required this.matches});
+  final TextEditingController controller;
+  final _FieldSpec spec;
+
+  /// The first field, passed to [spec]'s validator for confirmation checks.
+  final TextEditingController matches;
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    controller: controller,
+    obscureText: true,
+    keyboardType: spec.keyboard,
+    inputFormatters: spec.formatters,
+    decoration: InputDecoration(labelText: context.tr(spec.label)),
+    validator: (value) => spec.validator(value ?? '', matches.text),
+  );
 }
 
 class _SecurityAction extends StatelessWidget {

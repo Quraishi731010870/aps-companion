@@ -1,8 +1,15 @@
 import 'dart:convert';
 
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../network/api_client.dart';
+
+part 'config_repository.g.dart';
+
+@Riverpod(keepAlive: true)
+ConfigRepository configRepository(Ref ref) =>
+    ConfigRepository(ref.watch(apiClientProvider));
 
 class MobileConfiguration {
   const MobileConfiguration({
@@ -13,6 +20,17 @@ class MobileConfiguration {
     required this.content,
     required this.fromCache,
   });
+
+  /// Safe default used before the first load and when nothing is cached.
+  static const empty = MobileConfiguration(
+    version: 0,
+    updatedAt: null,
+    values: {},
+    features: {},
+    content: [],
+    fromCache: true,
+  );
+
   final int version;
   final DateTime? updatedAt;
   final Map<String, dynamic> values;
@@ -21,6 +39,11 @@ class MobileConfiguration {
   final bool fromCache;
   bool featureEnabled(String key, {bool safeDefault = false}) =>
       features[key] ?? safeDefault;
+  bool get maintenanceMode => values['maintenanceMode'] == true;
+  String? get maintenanceMessage => switch (values['maintenanceMessage']) {
+    final String message => message,
+    _ => null,
+  };
 }
 
 class ConfigRepository {
@@ -42,14 +65,7 @@ class ConfigRepository {
       if (cached != null) {
         return _parse(jsonDecode(cached) as Map<String, dynamic>, true);
       }
-      return const MobileConfiguration(
-        version: 0,
-        updatedAt: null,
-        values: {},
-        features: {},
-        content: [],
-        fromCache: true,
-      );
+      return MobileConfiguration.empty;
     }
   }
 

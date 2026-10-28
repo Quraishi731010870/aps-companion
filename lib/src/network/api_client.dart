@@ -3,6 +3,21 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../config/app_environment.dart';
+
+part 'api_client.g.dart';
+
+/// App-wide HTTP client; closed when the provider is disposed.
+@Riverpod(keepAlive: true)
+ApiClient apiClient(Ref ref) {
+  final client = ApiClient(
+    baseUrl: ref.watch(appEnvironmentProvider).apiBaseUrl,
+  );
+  ref.onDispose(client.dispose);
+  return client;
+}
 
 class ApiClient {
   ApiClient({
@@ -15,7 +30,6 @@ class ApiClient {
   final http.Client _client;
   final FlutterSecureStorage _storage;
   Future<bool>? _refreshInFlight;
-  bool get isConfigured => Uri.tryParse(baseUrl)?.hasScheme ?? false;
 
   Future<Map<String, dynamic>> getJson(
     String path, {
