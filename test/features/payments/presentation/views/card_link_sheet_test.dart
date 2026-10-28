@@ -30,7 +30,7 @@ void main() {
 
     expect(find.text('Enter a valid card number'), findsOneWidget);
     expect(find.text('Use MM/YY'), findsOneWidget);
-    expect(containerOf(tester).read(linkedCardProvider), isNull);
+    expect(containerOf(tester).read(linkedCardProvider).value, isNull);
   });
 
   testWidgets('a valid card is linked, masked and shown on Home', (
@@ -51,8 +51,11 @@ void main() {
 
     expect(find.text('Link your card'), findsNothing);
     expect(find.text('Card linked successfully for testing.'), findsOneWidget);
-    expect(find.text('APS card  •••• 1234'), findsOneWidget);
-    expect(find.textContaining('603799'), findsNothing);
-    expect(containerOf(tester).read(linkedCardProvider), 'APS card  •••• 1234');
+    expect(find.text('APS card 6037 99** **** 1234'), findsOneWidget);
+    expect(find.textContaining('6037991234561234'), findsNothing);
+    expect(
+      containerOf(tester).read(linkedCardProvider).value?.maskedPan,
+      '603799******1234',
+    );
   });
 }

@@ -1,10 +1,13 @@
-import { Body, Controller, ForbiddenException, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Prisma, TransactionStatus } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import type { AuthenticatedRequest } from '../auth/auth.types';
+import { CardCryptoService } from '../cards/card-crypto.service';
+import { looksLikePan, maskPan } from '../cards/card-envelope';
+import { CardEnvelopeDto } from '../cards/card-envelope.dto';
 import { PrismaService } from '../database/prisma.service';
 
 class TransactionQuery {
@@ -37,21 +40,42 @@ class CreateTransactionDto {
   @IsString() @MaxLength(3) currency!: string;
   @IsString() @MaxLength(160) reference!: string;
   @IsString() @IsNotEmpty() @MaxLength(128) idempotencyKey!: string;
+  /** Pay with a vaulted card (source is then its masked PAN). */
+  @IsOptional() @IsString() @MaxLength(64) cardToken?: string;
+  /** Pay with a one-off card, encrypted by the app (see cards/card-envelope.ts). */
+  @IsOptional() @ValidateNested() @Type(() => CardEnvelopeDto) encryptedCard?: CardEnvelopeDto;
 }
 
 @ApiTags('transactions') @Controller({ path: 'transactions', version: '1' })
 export class TransactionsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cards: CardCryptoService) {}
   @Post() async create(@Body() dto: CreateTransactionDto, @Req() request: AuthenticatedRequest) {
     const existing = await this.prisma.transaction.findUnique({ where: { idempotencyKey: dto.idempotencyKey }, include: { transactionType: true } });
     if (existing) return { id: existing.transactionId, status: existing.status, createdAt: existing.createdAt, responseCode: existing.responseCode, responseDescription: existing.responseDescription, duplicate: true };
     const transactionType = await this.prisma.transactionType.findUnique({ where: { code: String(dto.transactionType) } });
     if (!transactionType || !transactionType.enabled) throw new NotFoundException({ code: 'TRANSACTION_TYPE_UNAVAILABLE', message: 'This transaction type is not available.' });
     const customer = await this.prisma.customer.findUnique({ where: { userId: request.principal.sub }, include: { accounts: { where: { status: 'ACTIVE' }, take: 1 } } });
+    const sourceReference = await this.resolveSource(dto, customer?.id);
     const now = new Date(); const identifier = `AFG-${now.getTime()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-    const transaction = await this.prisma.transaction.create({ data: { transactionTypeId: transactionType.id, customerId: customer?.id, sourceAccountId: customer?.accounts[0]?.id, transactionId: identifier, idempotencyKey: dto.idempotencyKey, amount: dto.amount.toFixed(2), currency: dto.currency.toUpperCase(), direction: transactionType.financial ? 'DEBIT' : 'NON_FINANCIAL', channel: 'MOBILE', sourceReference: dto.source, destinationReference: dto.destination, status: 'PENDING', events: { create: { toStatus: 'PENDING', eventType: 'CREATED', safeMetadata: { reference: dto.reference } } } } });
+    const transaction = await this.prisma.transaction.create({ data: { transactionTypeId: transactionType.id, customerId: customer?.id, sourceAccountId: customer?.accounts[0]?.id, transactionId: identifier, idempotencyKey: dto.idempotencyKey, amount: dto.amount.toFixed(2), currency: dto.currency.toUpperCase(), direction: transactionType.financial ? 'DEBIT' : 'NON_FINANCIAL', channel: 'MOBILE', sourceReference, destinationReference: dto.destination, status: 'PENDING', events: { create: { toStatus: 'PENDING', eventType: 'CREATED', safeMetadata: { reference: dto.reference } } } } });
     return { id: transaction.transactionId, status: transaction.status, createdAt: transaction.createdAt, responseDescription: 'Transaction accepted for processing.' };
   }
+  /**
+   * The funding card is never stored in clear: a vault token or an encrypted
+   * card resolves to its masked PAN, and a raw card number is refused.
+   */
+  private async resolveSource(dto: CreateTransactionDto, customerId: string | undefined): Promise<string> {
+    if (dto.cardToken && dto.encryptedCard) throw new BadRequestException({ code: 'CARD_SOURCE_AMBIGUOUS', message: 'Send either a saved card or a new card, not both.' });
+    if (dto.cardToken) {
+      const card = customerId ? await this.prisma.savedCard.findFirst({ where: { token: dto.cardToken, customerId, revokedAt: null }, select: { maskedPan: true } }) : null;
+      if (!card) throw new NotFoundException({ code: 'CARD_NOT_FOUND', message: 'Card not found.' });
+      return card.maskedPan;
+    }
+    if (dto.encryptedCard) return maskPan(this.cards.open(dto.encryptedCard).pan);
+    if (looksLikePan(dto.source)) throw new BadRequestException({ code: 'CARD_NUMBER_NOT_ENCRYPTED', message: 'Card numbers must be sent encrypted.' });
+    return dto.source;
+  }
+
   @Get('stats') @Permissions('transactions.view') async stats() { return this.prisma.transaction.groupBy({ by: ['status'], _count: true, _sum: { amount: true } }); }
   @Get() async list(@Query() query: TransactionQuery, @Req() request: AuthenticatedRequest) {
     if (request.principal.type === 'ADMIN' && !request.principal.permissions.includes('transactions.view')) throw new ForbiddenException({ code: 'PERMISSION_DENIED', message: 'Transaction access is not permitted.' });

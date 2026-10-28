@@ -51,7 +51,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final linkedCard = ref.watch(linkedCardProvider);
+    final linkedCard = ref.watch(linkedCardProvider).value;
     final userName = ref.watch(
       displayedUserProvider.select((user) => user.displayName),
     );
@@ -201,7 +201,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               title: Text(
-                linkedCard ?? context.tr('No card linked'),
+                linkedCard?.label ?? context.tr('No card linked'),
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               subtitle: Text(

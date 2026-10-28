@@ -178,10 +178,11 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `secureStoreProvider` | `core/storage` | Encrypted storage for tokens and the user profile |
 | `configRepositoryProvider`, `configSyncServiceProvider` | `core/remote_config/data` | Remote config with offline cache; live config socket |
 | `mobileConfigProvider`, `currentConfigProvider` | `core/remote_config/state` | Remote config (flags, maintenance mode), previous value kept while reloading |
+| `cardVaultProvider` | `features/payments/data` | Backend card vault (encrypt, vault, pinned key) or offline mock |
 | `enabledOperationsProvider` | `features/payments/presentation/view_models` | Payment operations allowed by remote feature flags |
 | `paymentGatewayProvider` | `features/payments/data` | Chooses backend / Sheets / mock gateway |
 | `paymentSubmissionProvider` | `features/payments/presentation/view_models` | Submits a payment; double-tap guard; reuses the idempotency key on retry |
-| `linkedCardProvider` | `features/payments/presentation/view_models` | Masked linked-card label |
+| `linkedCardProvider` | `features/payments/presentation/view_models` | Linked `SavedCard` (vault token + masked number), persisted in secure storage |
 | `activitiesProvider` | `features/activity/presentation/view_models` | Wallet history (invalidated after each payment) |
 | `biometricAuthenticatorProvider` | `features/settings/data` | Platform biometric check |
 | `settingsProvider` | `features/settings/presentation/view_models` | Language, biometric flag, transaction limits |
@@ -274,7 +275,22 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
     permissions or passwords. Only `MOBILE_USER` accounts may sign in to the app.
   - Ending a session (`ApiClient.clearSession` / `AuthRepository.signOut`) clears every
     `SecureKey`, not just tokens.
-- Never store, log or display a full card PAN or CVV. Show masked values (`•••• 1087`).
+- Never store, log or display a full card PAN or CVV. Show masked values
+  (`CardNumber.masked` → `603799******1234`, displayed as `6037 99** **** 1234`).
+- **Card data in transit** (`features/payments/data/card_encryptor.dart` ↔
+  `backend/src/cards/card-envelope.ts`): a card number leaves the device only inside a
+  `CardEnvelope` — AES-256-GCM over the card JSON with a fresh key and nonce per request, the
+  key wrapped with the backend's RSA-OAEP-256 (3072-bit) public key, AAD bound to the key id,
+  and a timestamp the backend checks (5-minute replay window). This is on top of TLS.
+  - The app pins the backend key by its RFC 7638 thumbprint (`CARD_KEY_SHA256` define; the
+    `kid` from `GET /api/v1/cards/encryption-key`). Release builds refuse cards without a pin.
+  - Saved cards: `POST /api/v1/cards` vaults the card (AES-256-GCM at rest with
+    `CARD_VAULT_KEY`, bound to the customer); the device keeps only the token and masked
+    number (`SecureKey.linkedCard`). Pay with `cardToken`; one-off cards with `encryptedCard`.
+  - The backend rejects a raw card number in `source` (`CARD_NUMBER_NOT_ENCRYPTED`) and stores
+    only masked numbers in transactions.
+  - Any change to the envelope must change both files and keep the shared RFC 7638 test
+    vector passing on both sides.
 - Errors shown to users stay generic (see `ApiException`); don't surface raw server bodies.
 - Read `SECURITY.md` before touching auth, Google Sheets or ISO 8583 code.
 

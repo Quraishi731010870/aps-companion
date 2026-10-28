@@ -2,7 +2,6 @@ import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
 import 'package:afghan_emi/src/core/remote_config/state/mobile_config.dart';
 import 'package:afghan_emi/src/features/payments/presentation/view_models/enabled_operations.dart';
 import 'package:afghan_emi/src/features/payments/domain/payment_transaction.dart';
-import 'package:afghan_emi/src/features/payments/presentation/view_models/linked_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,16 +39,5 @@ void main() {
 
     expect(config, same(MobileConfiguration.empty));
     expect(config.maintenanceMode, isFalse);
-  });
-
-  test('linking a card stores only the masked label', () {
-    final container = ProviderContainer.test();
-
-    final label = container
-        .read(linkedCardProvider.notifier)
-        .link('6037991234561234');
-
-    expect(label, 'APS card  •••• 1234');
-    expect(container.read(linkedCardProvider), isNot(contains('603799')));
   });
 }

@@ -2,6 +2,7 @@
   "API_BASE_URL": "http://localhost:8081",
   "TEST_USER_PHONE": "SAME_AS_SEED_MOBILE_PHONE_IN_.env",
   "TEST_USER_PASSWORD": "SAME_AS_SEED_MOBILE_PASSWORD_IN_.env",
+  "CARD_KEY_SHA256": "KID_FROM_GET_/api/v1/cards/encryption-key",
   "GOOGLE_SHEETS_SERVICE_URL": "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
   "GOOGLE_SHEETS_SERVICE_TOKEN": "SET_A_NEW_TEST_TOKEN_LOCALLY"
 }
