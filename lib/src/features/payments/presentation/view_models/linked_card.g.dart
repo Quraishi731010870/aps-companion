@@ -8,17 +8,18 @@ part of 'linked_card.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Prototype linked card shared by Home and the payment flow. Holds only the
-/// masked label; production must replace this with a vault token (APS p.31).
+/// The card linked on this device, shared by Home and the payment flow.
+/// Holds only the vault token and masked number (APS p.31).
 
 @ProviderFor(LinkedCard)
 final linkedCardProvider = LinkedCardProvider._();
 
-/// Prototype linked card shared by Home and the payment flow. Holds only the
-/// masked label; production must replace this with a vault token (APS p.31).
-final class LinkedCardProvider extends $NotifierProvider<LinkedCard, String?> {
-  /// Prototype linked card shared by Home and the payment flow. Holds only the
-  /// masked label; production must replace this with a vault token (APS p.31).
+/// The card linked on this device, shared by Home and the payment flow.
+/// Holds only the vault token and masked number (APS p.31).
+final class LinkedCardProvider
+    extends $AsyncNotifierProvider<LinkedCard, SavedCard?> {
+  /// The card linked on this device, shared by Home and the payment flow.
+  /// Holds only the vault token and masked number (APS p.31).
   LinkedCardProvider._()
     : super(
         from: null,
@@ -36,32 +37,24 @@ final class LinkedCardProvider extends $NotifierProvider<LinkedCard, String?> {
   @$internal
   @override
   LinkedCard create() => LinkedCard();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(String? value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<String?>(value),
-    );
-  }
 }
 
-String _$linkedCardHash() => r'4f424eea49d718aca77b15f45df2f278abede421';
+String _$linkedCardHash() => r'3bb2288e213872190db7ad47d987741999c2097f';
 
-/// Prototype linked card shared by Home and the payment flow. Holds only the
-/// masked label; production must replace this with a vault token (APS p.31).
+/// The card linked on this device, shared by Home and the payment flow.
+/// Holds only the vault token and masked number (APS p.31).
 
-abstract class _$LinkedCard extends $Notifier<String?> {
-  String? build();
+abstract class _$LinkedCard extends $AsyncNotifier<SavedCard?> {
+  FutureOr<SavedCard?> build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<String?, String?>;
+    final ref = this.ref as $Ref<AsyncValue<SavedCard?>, SavedCard?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<String?, String?>,
-              String?,
+              AnyNotifier<AsyncValue<SavedCard?>, SavedCard?>,
+              AsyncValue<SavedCard?>,
               Object?,
               Object?
             >;

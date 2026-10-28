@@ -1,16 +1,22 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../domain/card_number.dart';
+import '../../data/card_vault_provider.dart';
+import '../../domain/card_details.dart';
+import '../../domain/saved_card.dart';
 
 part 'linked_card.g.dart';
 
-/// Prototype linked card shared by Home and the payment flow. Holds only the
-/// masked label; production must replace this with a vault token (APS p.31).
+/// The card linked on this device, shared by Home and the payment flow.
+/// Holds only the vault token and masked number (APS p.31).
 @Riverpod(keepAlive: true)
 class LinkedCard extends _$LinkedCard {
   @override
-  String? build() => null;
+  Future<SavedCard?> build() => ref.watch(cardVaultProvider).linkedCard();
 
-  /// Masks [cardNumber], stores the label and returns it.
-  String link(String cardNumber) => state = CardNumber.masked(cardNumber);
+  /// Encrypts [card], vaults it on the backend and links the returned token.
+  Future<SavedCard> link(CardDetails card) async {
+    final saved = await ref.read(cardVaultProvider).saveCard(card);
+    if (ref.mounted) state = AsyncData(saved);
+    return saved;
+  }
 }

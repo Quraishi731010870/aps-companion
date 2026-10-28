@@ -132,9 +132,32 @@ model Customer {
   user        User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   accounts    Account[]
   transactions Transaction[]
+  savedCards  SavedCard[]
 
   @@index([status, createdAt])
   @@map("customers")
+}
+
+/// Card vault. The PAN is stored only as AES-256-GCM ciphertext (vault key,
+/// bound to the customer); the app only ever holds the token and masked PAN.
+model SavedCard {
+  id             String    @id @default(uuid()) @db.Uuid
+  customerId     String    @map("customer_id") @db.Uuid
+  token          String    @unique @db.VarChar(64)
+  panCiphertext  Bytes     @map("pan_ciphertext")
+  panFingerprint String    @map("pan_fingerprint") @db.Char(64)
+  maskedPan      String    @map("masked_pan") @db.VarChar(19)
+  expiryMonth    Int?      @map("expiry_month") @db.SmallInt
+  expiryYear     Int?      @map("expiry_year") @db.SmallInt
+  holderName     String?   @map("holder_name") @db.VarChar(120)
+  keyId          String    @map("key_id") @db.VarChar(64)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@unique([customerId, panFingerprint])
+  @@index([customerId, revokedAt])
+  @@map("saved_cards")
 }
 
 model Role {

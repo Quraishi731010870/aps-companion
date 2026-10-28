@@ -6,6 +6,7 @@ import '../../../../core/formatting/currency_format.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../profile/domain/wallet_identity.dart';
 import '../../../settings/presentation/view_models/settings.dart';
+import '../../domain/card_details.dart';
 import '../../domain/card_number.dart';
 import '../../domain/payment_transaction.dart';
 import '../view_models/linked_card.dart';
@@ -54,7 +55,7 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
     super.initState();
     fundingSource = _walletCanFund(widget.operation)
         ? PaymentFundingSource.wallet
-        : ref.read(linkedCardProvider) == null
+        : ref.read(linkedCardProvider).value == null
         ? PaymentFundingSource.manualCard
         : PaymentFundingSource.linkedCard;
     _syncSource();
@@ -80,7 +81,7 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
     final loading = ref.watch(
       paymentSubmissionProvider.select((submission) => submission.isLoading),
     );
-    final linkedCard = ref.watch(linkedCardProvider);
+    final linkedCard = ref.watch(linkedCardProvider).value;
     return Scaffold(
       appBar: AppBar(title: Text(widget.operation.label)),
       body: SafeArea(
@@ -133,7 +134,7 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: Text(
-                            linkedCard ??
+                            linkedCard?.label ??
                                 context.tr(
                                   'No card linked — link one from Home first',
                                 ),
@@ -298,7 +299,7 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
         fundingSource == PaymentFundingSource.wallet) {
       source.text = WalletIdentity.number;
     } else if (fundingSource == PaymentFundingSource.linkedCard) {
-      source.text = ref.read(linkedCardProvider) ?? '';
+      source.text = ref.read(linkedCardProvider).value?.maskedPan ?? '';
     } else {
       source.clear();
     }
@@ -344,8 +345,18 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
           destination: destination.text.trim(),
           amount: double.tryParse(amount.text) ?? 0,
           reference: reference.text.trim(),
+          cardToken: _paysWith(PaymentFundingSource.linkedCard)
+              ? ref.read(linkedCardProvider).value?.token
+              : null,
+          // A typed-in card is encrypted by the view model before sending.
+          card: _paysWith(PaymentFundingSource.manualCard)
+              ? CardDetails(pan: source.text.trim())
+              : null,
         );
   }
+
+  bool _paysWith(PaymentFundingSource funding) =>
+      widget.operation.requiresAmount && fundingSource == funding;
 
   void _onSubmissionChanged(
     AsyncValue<PaymentResult?>? previous,

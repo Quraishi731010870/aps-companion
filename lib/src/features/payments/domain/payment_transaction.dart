@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'card_vault.dart';
+
 enum PaymentOperation {
   balanceInquiry(
     702,
@@ -48,14 +50,24 @@ class PaymentRequest {
     required this.amount,
     required this.reference,
     required this.idempotencyKey,
+    this.cardToken,
+    this.encryptedCard,
   });
 
   final PaymentOperation operation;
+
+  /// Wallet number, or the masked number of the paying card. Never a full PAN.
   final String source;
   final String destination;
   final double amount;
   final String reference;
   final String idempotencyKey;
+
+  /// Vault token when paying with the linked card.
+  final String? cardToken;
+
+  /// The paying card, encrypted for the backend, when entered manually.
+  final CardEnvelope? encryptedCard;
 
   Map<String, Object> toJson() => {
     'transactionType': operation.code,
@@ -65,6 +77,8 @@ class PaymentRequest {
     'currency': 'AFN',
     'reference': reference,
     'idempotencyKey': idempotencyKey,
+    'cardToken': ?cardToken,
+    'encryptedCard': ?encryptedCard?.toJson(),
   };
 }
 

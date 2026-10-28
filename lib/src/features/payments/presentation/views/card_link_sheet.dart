@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../auth/presentation/view_models/current_user.dart';
+import '../../domain/card_details.dart';
 import '../../domain/card_number.dart';
 import '../view_models/linked_card.dart';
 
@@ -24,6 +25,7 @@ class _CardLinkSheet extends ConsumerStatefulWidget {
 
 class _CardLinkSheetState extends ConsumerState<_CardLinkSheet> {
   final formKey = GlobalKey<FormState>();
+  bool _saving = false;
   final cardNumber = TextEditingController();
   final expiry = TextEditingController();
   late final name = TextEditingController(
@@ -134,8 +136,13 @@ class _CardLinkSheetState extends ConsumerState<_CardLinkSheet> {
           SizedBox(
             height: 52,
             child: FilledButton.icon(
-              onPressed: _link,
-              icon: const Icon(Icons.link_rounded),
+              onPressed: _saving ? null : _link,
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.link_rounded),
               label: Text(context.tr('Link card')),
             ),
           ),
@@ -144,9 +151,34 @@ class _CardLinkSheetState extends ConsumerState<_CardLinkSheet> {
     ),
   );
 
-  void _link() {
+  /// Encrypts the card and vaults it; only the token and masked number come
+  /// back to the device.
+  Future<void> _link() async {
     if (!(formKey.currentState?.validate() ?? false)) return;
-    final label = ref.read(linkedCardProvider.notifier).link(cardNumber.text);
-    Navigator.pop(context, label);
+    final (month, year) = CardDetails.parseExpiry(expiry.text) ?? (null, null);
+    setState(() => _saving = true);
+    try {
+      final saved = await ref
+          .read(linkedCardProvider.notifier)
+          .link(
+            CardDetails(
+              pan: cardNumber.text.trim(),
+              expiryMonth: month,
+              expiryYear: year,
+              holderName: name.text,
+            ),
+          );
+      if (mounted) Navigator.pop(context, saved.label);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr('The card could not be saved. Please try again.'),
+          ),
+        ),
+      );
+    }
   }
 }

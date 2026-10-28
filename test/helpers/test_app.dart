@@ -3,6 +3,9 @@ import 'package:afghan_emi/src/core/config/app_environment.dart';
 import 'package:afghan_emi/src/core/storage/secure_store.dart';
 import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
 import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
+import 'package:afghan_emi/src/features/payments/domain/card_details.dart';
+import 'package:afghan_emi/src/features/payments/domain/card_vault.dart';
+import 'package:afghan_emi/src/features/payments/domain/saved_card.dart';
 import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
 import 'package:afghan_emi/src/features/payments/data/mock_payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/data/payment_gateway_provider.dart';
@@ -94,6 +97,38 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async => hasTokens = false;
+}
+
+/// Card vault double: records what it was asked to encrypt; can fail.
+class FakeCardVault implements CardVault {
+  SavedCard? linked;
+  Object? error;
+  final encrypted = <CardDetails>[];
+
+  static const envelope = CardEnvelope(
+    kid: 'kid',
+    ek: 'ek',
+    iv: 'iv',
+    ct: 'ct',
+  );
+
+  @override
+  Future<SavedCard?> linkedCard() async => linked;
+
+  @override
+  Future<SavedCard> saveCard(CardDetails card) async {
+    final failure = error;
+    if (failure != null) throw failure;
+    return linked = SavedCard(token: 'ctok_test', maskedPan: card.maskedPan);
+  }
+
+  @override
+  Future<CardEnvelope> encryptForPayment(CardDetails card) async {
+    final failure = error;
+    if (failure != null) throw failure;
+    encrypted.add(card);
+    return envelope;
+  }
 }
 
 /// Mocks both plugins [SecureStore] uses. [values] are pre-stored secure

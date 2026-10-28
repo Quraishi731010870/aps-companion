@@ -1,6 +1,7 @@
 import 'package:afghan_emi/src/core/remote_config/state/mobile_config.dart';
 import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
 import 'package:afghan_emi/src/features/auth/presentation/view_models/current_user.dart';
+import 'package:afghan_emi/src/features/payments/domain/card_details.dart';
 import 'package:afghan_emi/src/features/payments/presentation/view_models/linked_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,12 +71,12 @@ void main() {
   ) async {
     await pumpApp(tester);
 
-    containerOf(tester)
+    await containerOf(tester)
         .read(linkedCardProvider.notifier)
-        .link('6037991234561234');
+        .link(const CardDetails(pan: '6037991234561234'));
     await tester.pump();
 
-    expect(find.text('APS card  •••• 1234'), findsOneWidget);
+    expect(find.text('APS card 6037 99** **** 1234'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     expect(find.text('No card linked'), findsNothing);
   });

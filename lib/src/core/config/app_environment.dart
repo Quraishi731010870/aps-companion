@@ -12,6 +12,7 @@ class AppEnvironment {
     this.sheetsApiKey = '',
     this.testUserIdentifier = '',
     this.testUserPassword = '',
+    this.cardKeySha256 = '',
     this.isRelease = kReleaseMode,
   });
 
@@ -21,6 +22,7 @@ class AppEnvironment {
       sheetsApiKey = const String.fromEnvironment('GOOGLE_SHEETS_API_KEY'),
       testUserIdentifier = const String.fromEnvironment('TEST_USER_PHONE'),
       testUserPassword = const String.fromEnvironment('TEST_USER_PASSWORD'),
+      cardKeySha256 = const String.fromEnvironment('CARD_KEY_SHA256'),
       isRelease = kReleaseMode;
 
   final String apiBaseUrl;
@@ -32,6 +34,11 @@ class AppEnvironment {
   final String testUserIdentifier;
   final String testUserPassword;
   final bool isRelease;
+
+  /// RFC 7638 thumbprint of the backend's card-encryption public key. The app
+  /// refuses any other key, so a man-in-the-middle cannot swap in their own.
+  /// Required in release builds.
+  final String cardKeySha256;
 
   /// Requires an explicit http(s) URL: `Uri` would otherwise read
   /// `localhost:8081` as scheme `localhost`.

@@ -8,7 +8,10 @@ part 'secure_store.g.dart';
 enum SecureKey {
   accessToken('afghanpay_access_token'),
   refreshToken('afghanpay_refresh_token'),
-  userProfile('afghanpay_user_profile');
+  userProfile('afghanpay_user_profile'),
+
+  /// Vault token and masked number of the linked card. Never a full PAN.
+  linkedCard('afghanpay_linked_card');
 
   const SecureKey(this.storageKey);
   final String storageKey;

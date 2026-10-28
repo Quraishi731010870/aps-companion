@@ -30,8 +30,14 @@ void main() {
       expect(CardNumber.isValid('1234 5678 9012'), isFalse);
     });
 
-    test('masks all but the last four digits', () {
-      expect(CardNumber.masked('6037991234561234'), 'APS card  •••• 1234');
+    test('keeps only the first six and last four digits', () {
+      expect(CardNumber.masked('6037991234561234'), '603799******1234');
+      expect(CardNumber.masked('603799123456'), '603799**3456');
+    });
+
+    test('groups a masked number in fours for display', () {
+      expect(CardNumber.display('603799******1234'), '6037 99** **** 1234');
+      expect(CardNumber.display('603799**3456'), '6037 99** 3456');
     });
   });
 
