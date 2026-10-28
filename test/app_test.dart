@@ -1,5 +1,5 @@
-import 'package:afghan_emi/src/repositories/config_repository.dart';
-import 'package:afghan_emi/src/state/mobile_config.dart';
+import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
+import 'package:afghan_emi/src/core/remote_config/state/mobile_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

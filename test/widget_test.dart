@@ -1,4 +1,4 @@
-import 'package:afghan_emi/src/domain/wallet_identity.dart';
+import 'package:afghan_emi/src/features/profile/domain/wallet_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

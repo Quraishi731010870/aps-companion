@@ -1,0 +1,55 @@
+import 'package:flutter/material.dart';
+
+import '../core/l10n/app_localizations.dart';
+import '../features/activity/presentation/views/activity_screen.dart';
+import '../features/home/presentation/views/home_screen.dart';
+import '../features/profile/presentation/views/profile_screen.dart';
+import '../features/services/presentation/views/services_screen.dart';
+
+class MainShell extends StatefulWidget {
+  const MainShell({super.key});
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  int index = 0;
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      HomeScreen(onNotificationsPressed: () => setState(() => index = 2)),
+      const ServicesScreen(),
+      const ActivityScreen(),
+      const ProfileScreen(),
+    ];
+    return Scaffold(
+      body: IndexedStack(index: index, children: pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: (value) => setState(() => index = value),
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home_rounded),
+            label: context.tr('Home'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.grid_view_outlined),
+            selectedIcon: const Icon(Icons.grid_view_rounded),
+            label: context.tr('Services'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.receipt_long_outlined),
+            selectedIcon: const Icon(Icons.receipt_long_rounded),
+            label: context.tr('Activity'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline_rounded),
+            selectedIcon: const Icon(Icons.person_rounded),
+            label: context.tr('Profile'),
+          ),
+        ],
+      ),
+    );
+  }
+}

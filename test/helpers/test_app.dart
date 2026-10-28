@@ -1,9 +1,9 @@
 import 'package:afghan_emi/src/app.dart';
-import 'package:afghan_emi/src/data/mock_payment_gateway.dart';
-import 'package:afghan_emi/src/data/payment_gateway_provider.dart';
-import 'package:afghan_emi/src/domain/payment_gateway.dart';
-import 'package:afghan_emi/src/domain/payment_transaction.dart';
-import 'package:afghan_emi/src/repositories/config_repository.dart';
+import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
+import 'package:afghan_emi/src/features/payments/data/mock_payment_gateway.dart';
+import 'package:afghan_emi/src/features/payments/data/payment_gateway_provider.dart';
+import 'package:afghan_emi/src/features/payments/domain/payment_gateway.dart';
+import 'package:afghan_emi/src/features/payments/domain/payment_transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;

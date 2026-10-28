@@ -23,14 +23,14 @@ Android emulator reaches the local API at `http://10.0.2.2:8081`; browser/deskto
 
 ## Engineering principles (apply to every change)
 
-- **MVVM:** View = widgets in `screens/` and `widgets/` (render state, forward user
-  input, nothing else). ViewModel = Riverpod `Notifier`/`AsyncNotifier` in `state/`.
-  Model = `domain/` (entities, rules) plus `repositories/`, `data/` and `network/`.
+- **MVVM:** View = `presentation/views/` and `presentation/widgets/` (render state,
+  forward user input, nothing else). ViewModel = Riverpod `Notifier`/`AsyncNotifier` in
+  `presentation/view_models/`. Model = `domain/` (entities, rules) plus `data/`.
   Views talk only to ViewModels; ViewModels reach data only through providers.
 - **DRY / reuse first:** before writing a widget, helper, formatter, provider or model,
-  search for an existing one and reuse or extend it. Shared UI goes in `widgets/`
-  (e.g. `ActivityTile`, `LoadingView`, `ErrorRetryView`); shared rules go in `domain/`
-  (e.g. `CardNumber`, `TransactionLimits`, `IdempotencyKey`).
+  search for an existing one and reuse or extend it. Code used by two or more features
+  goes in `core/` (e.g. `LoadingView`, `ErrorRetryView`, `afn()`); a feature's own
+  reusable pieces stay in that feature (e.g. `CardNumber`, `IdempotencyKey` in payments).
 - **SOLID:** one responsibility per class and file; depend on abstractions
   (`PaymentGateway`, `BiometricAuthenticator`) injected through providers; add new
   behaviour by adding an implementation, not by editing callers.
@@ -43,22 +43,52 @@ Android emulator reaches the local API at `http://10.0.2.2:8081`; browser/deskto
 - **Smoothness:** `const` widgets, `select` for narrow rebuilds, lazy lists
   (`ListView.builder` / `SliverList`), nothing heavy in `build` or on the UI isolate.
 
-## Project structure (`lib/src/`)
+## Project structure (feature-first)
 
-| Folder | Holds |
+```text
+lib/
+  main.dart                    ProviderScope + app entry
+  src/
+    app.dart                   MaterialApp, theme, maintenance gate
+    shell/                     MainShell (bottom navigation)
+    core/                      shared by every feature; never imports features/
+      config/                  AppEnvironment (only place --dart-define is read)
+      network/                 ApiClient
+      remote_config/
+        data/                  ConfigRepository, ConfigSyncService (socket)
+        state/                 MobileConfig, currentConfig
+      formatting/              afn() and other display formatters
+      l10n/                    context.tr() English → Dari
+      widgets/                 LoadingView, ErrorRetryView
+    features/
+      <feature>/
+        domain/                entities, value objects, rules (no Flutter UI, no I/O, no Riverpod)
+        data/                  gateways, services, repositories + their providers
+        presentation/
+          view_models/         Riverpod Notifier / AsyncNotifier (ViewModels)
+          views/               full screens, sheets, dialogs (*_screen.dart)
+          widgets/             widgets reused inside the feature
+```
+
+| Feature | Owns |
 |---|---|
-| `config/` | `AppEnvironment` (the only place `--dart-define` values are read) and its provider. |
-| `domain/` | Immutable models and enums (`PaymentOperation`, `PaymentRequest`, `WalletActivity`). No Flutter widgets, no I/O, no Riverpod. |
-| `data/` | `PaymentGateway` implementations (`BackendPaymentGateway`, `MockPaymentGateway`, `GoogleSheetsGateway`) and the provider that exposes them. |
-| `network/` | `ApiClient` (HTTP + token refresh), `ConfigSyncService` (Socket.IO `/realtime`) and their providers. |
-| `repositories/` | Data access with caching (`ConfigRepository`) and their providers. |
-| `state/` | Riverpod `Notifier` / `AsyncNotifier` classes: app-wide and feature state. One file per concern. |
-| `screens/` | One file per full-page screen, named `*_screen.dart`. |
-| `widgets/` | Reusable widgets and sheets shared across screens. |
-| `l10n/` | `context.tr()` English → Dari translations. |
+| `payments` | `PaymentOperation`/`PaymentRequest`/`PaymentResult`, `PaymentGateway` + backend/mock/Sheets gateways, idempotency keys, card numbers, payment flow, card linking, QR scanner, receipt |
+| `activity` | Wallet history, CSV export, `ActivityTile` |
+| `home` | Home dashboard |
+| `services` | Services catalogue |
+| `profile` | Profile, wallet identity and QR, security (PIN/password) |
+| `settings` | `AppSettings`/`TransactionLimits`, biometrics, limits screen |
+| `admin` | Prototype-only tools: management/ISO console, Google Sheets |
 
-Data flows one way: **widget → notifier (state/) → repository / gateway → ApiClient**.
-Widgets never skip a layer.
+Rules:
+- A new feature gets its own `features/<name>/` folder with only the sub-folders it needs.
+- Features may import another feature's `domain/` and providers, but never its
+  `data/` implementations directly — go through the provider.
+- `core/` must not import from `features/`.
+- Folder names are `snake_case`; files keep the `*_screen.dart` suffix for full screens.
+
+Data flows one way: **view → view model → repository / gateway → ApiClient**.
+Views never skip a layer.
 
 ---
 
@@ -115,18 +145,19 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
   or store it in a long-lived object.
 
 ### Existing providers (reuse these)
-| Provider | Layer | Purpose |
+| Provider | Location | Purpose |
 |---|---|---|
-| `appEnvironmentProvider` | config | Build-time `--dart-define` values; override in tests |
-| `apiClientProvider`, `configSyncServiceProvider` | network | HTTP client and live config socket |
-| `configRepositoryProvider` | repositories | Remote config with offline cache |
-| `paymentGatewayProvider` | data | Chooses backend / Sheets / mock gateway |
-| `biometricAuthenticatorProvider` | data | Platform biometric check |
-| `settingsProvider` | state | Language, biometric flag, transaction limits |
-| `mobileConfigProvider`, `currentConfigProvider`, `enabledOperationsProvider` | state | Remote config and the feature-flagged operation list |
-| `linkedCardProvider` | state | Masked linked-card label |
-| `activitiesProvider` | state | Wallet history (invalidated after each payment) |
-| `paymentSubmissionProvider` | state | Submits a payment; double-tap guard; reuses the idempotency key on retry |
+| `appEnvironmentProvider` | `core/config` | Build-time `--dart-define` values; override in tests |
+| `apiClientProvider` | `core/network` | HTTP client with token refresh |
+| `configRepositoryProvider`, `configSyncServiceProvider` | `core/remote_config/data` | Remote config with offline cache; live config socket |
+| `mobileConfigProvider`, `currentConfigProvider` | `core/remote_config/state` | Remote config (flags, maintenance mode), previous value kept while reloading |
+| `enabledOperationsProvider` | `features/payments/presentation/view_models` | Payment operations allowed by remote feature flags |
+| `paymentGatewayProvider` | `features/payments/data` | Chooses backend / Sheets / mock gateway |
+| `paymentSubmissionProvider` | `features/payments/presentation/view_models` | Submits a payment; double-tap guard; reuses the idempotency key on retry |
+| `linkedCardProvider` | `features/payments/presentation/view_models` | Masked linked-card label |
+| `activitiesProvider` | `features/activity/presentation/view_models` | Wallet history (invalidated after each payment) |
+| `biometricAuthenticatorProvider` | `features/settings/data` | Platform biometric check |
+| `settingsProvider` | `features/settings/presentation/view_models` | Language, biometric flag, transaction limits |
 
 `context.tr()` reads the locale from `Localizations`, so it needs no provider.
 
@@ -139,7 +170,8 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
   state (controllers, animation, focus, form fields).
 - Use `const` constructors and `const` widgets everywhere possible.
 - Keep `build` methods small: split into private widget classes (`_BalanceCard`), not helper
-  methods that return widgets. Promote them to `widgets/` when a second screen needs them.
+  methods that return widgets. Promote them to the feature's `presentation/widgets/` when a
+  second screen needs them, or to `core/widgets/` when a second feature does.
 - `build` must be side-effect free: no network calls, no state writes, no navigation.
 - Dispose every `TextEditingController`, `AnimationController`, `FocusNode`, `ScrollController`
   and subscription in `dispose()`.
@@ -160,7 +192,7 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 
 ### Dart code quality
 - Sound null safety: avoid `!`; handle null explicitly. Avoid `dynamic`. Parse JSON into
-  typed models at the boundary (`data/`, `repositories/`).
+  typed models at the boundary (each feature's `data/`, or `core/`).
 - Use `sealed` classes, `switch` expressions, records and pattern matching where they make
   intent clearer, so the compiler checks every case.
 - `final` by default; `const` where possible; private members start with `_`.
@@ -206,7 +238,9 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 - Read `SECURITY.md` before touching auth, Google Sheets or ISO 8583 code.
 
 ## Testing
-- Tests live in `test/`, mirror `lib/src/` paths, and are named `<feature>_test.dart`.
+- Tests live in `test/`, mirror `lib/src/` paths (e.g. `test/features/payments/data/…`),
+  and are named `<file>_test.dart`. Shared fakes and pump helpers are in
+  `test/helpers/test_app.dart` (`pumpApp`, `pumpScreen`, `FakePaymentGateway`, `testConfig`).
 - **Notifier/provider tests:** use `ProviderContainer.test(overrides: [...])`, override
   `paymentGatewayProvider` / `apiClientProvider` with fakes, and assert on state transitions
   (loading → data / error).

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'screens/main_shell.dart';
-import 'state/mobile_config.dart';
-import 'state/settings.dart';
+import 'core/remote_config/state/mobile_config.dart';
+import 'features/settings/presentation/view_models/settings.dart';
+import 'shell/main_shell.dart';
 
 class AfghanEmiApp extends ConsumerWidget {
   const AfghanEmiApp({super.key});
