@@ -1,4 +1,6 @@
 import 'package:afghan_emi/src/app.dart';
+import 'package:afghan_emi/src/core/config/app_environment.dart';
+import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
 import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
 import 'package:afghan_emi/src/features/payments/data/mock_payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/data/payment_gateway_provider.dart';
@@ -44,6 +46,37 @@ class FakePaymentGateway implements PaymentGateway {
     if (failure != null) throw failure;
     return activities ?? mockActivities;
   }
+}
+
+/// Backend environment with the seeded test user configured.
+const backendWithTestUser = AppEnvironment(
+  apiBaseUrl: 'http://localhost:8081',
+  testUserIdentifier: '+93790000001',
+  testUserPassword: 'test-password',
+  isRelease: false,
+);
+
+/// Auth double that records sign-ins and can be told to fail.
+class FakeAuthRepository implements AuthRepository {
+  FakeAuthRepository({this.hasTokens = false});
+
+  bool hasTokens;
+  Object? error;
+  final signIns = <(String, String)>[];
+
+  @override
+  Future<void> signIn({
+    required String identifier,
+    required String password,
+  }) async {
+    final failure = error;
+    if (failure != null) throw failure;
+    signIns.add((identifier, password));
+    hasTokens = true;
+  }
+
+  @override
+  Future<bool> hasSession() async => hasTokens;
 }
 
 /// Remote configuration with the given feature flags and values.

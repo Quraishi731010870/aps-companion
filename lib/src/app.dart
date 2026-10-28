@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/remote_config/state/mobile_config.dart';
+import 'features/auth/presentation/views/session_gate.dart';
 import 'features/settings/presentation/view_models/settings.dart';
 import 'shell/main_shell.dart';
 
@@ -28,7 +29,9 @@ class AfghanEmiApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: _theme,
-      home: maintenanceMode ? const _MaintenanceScreen() : const MainShell(),
+      home: maintenanceMode
+          ? const _MaintenanceScreen()
+          : const SessionGate(child: MainShell()),
     );
   }
 }
