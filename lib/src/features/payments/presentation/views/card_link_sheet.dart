@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
+import '../../../auth/presentation/view_models/current_user.dart';
 import '../../domain/card_number.dart';
 import '../view_models/linked_card.dart';
 
@@ -25,7 +26,9 @@ class _CardLinkSheetState extends ConsumerState<_CardLinkSheet> {
   final formKey = GlobalKey<FormState>();
   final cardNumber = TextEditingController();
   final expiry = TextEditingController();
-  final name = TextEditingController(text: 'Asif Quraishi');
+  late final name = TextEditingController(
+    text: ref.read(displayedUserProvider).displayName,
+  );
 
   @override
   void dispose() {

@@ -78,6 +78,7 @@ lib/
     core/                      shared by every feature; never imports features/
       config/                  AppEnvironment (only place --dart-define is read)
       network/                 ApiClient
+      storage/                 SecureStore (flutter_secure_storage wrapper, SecureKey)
       remote_config/
         data/                  ConfigRepository, ConfigSyncService (socket)
         state/                 MobileConfig, currentConfig
@@ -96,7 +97,7 @@ lib/
 
 | Feature | Owns |
 |---|---|
-| `auth` | `SessionStatus`, `AuthRepository` (login + token storage), `Session` view model, `SessionGate` |
+| `auth` | `SessionStatus`, `UserProfile`, `AuthRepository` (login, secure token + profile storage, sign-out), `Session` and current-user view models, `SessionGate` |
 | `payments` | `PaymentOperation`/`PaymentRequest`/`PaymentResult`, `PaymentGateway` + backend/mock/Sheets gateways, idempotency keys, card numbers, payment flow, card linking, QR scanner, receipt |
 | `activity` | Wallet history, CSV export, `ActivityTile` |
 | `home` | Home dashboard |
@@ -174,6 +175,7 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 |---|---|---|
 | `appEnvironmentProvider` | `core/config` | Build-time `--dart-define` values; override in tests |
 | `apiClientProvider` | `core/network` | HTTP client with token refresh |
+| `secureStoreProvider` | `core/storage` | Encrypted storage for tokens and the user profile |
 | `configRepositoryProvider`, `configSyncServiceProvider` | `core/remote_config/data` | Remote config with offline cache; live config socket |
 | `mobileConfigProvider`, `currentConfigProvider` | `core/remote_config/state` | Remote config (flags, maintenance mode), previous value kept while reloading |
 | `enabledOperationsProvider` | `features/payments/presentation/view_models` | Payment operations allowed by remote feature flags |
@@ -184,6 +186,7 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `biometricAuthenticatorProvider` | `features/settings/data` | Platform biometric check |
 | `settingsProvider` | `features/settings/presentation/view_models` | Language, biometric flag, transaction limits |
 | `authRepositoryProvider` | `features/auth/data` | Mobile login; stores tokens via `ApiClient` |
+| `currentUserProvider`, `displayedUserProvider` | `features/auth/presentation/view_models` | Signed-in `UserProfile` from secure storage; UI falls back to the demo user offline |
 | `sessionProvider` | `features/auth/presentation/view_models` | Signed in / out; auto-signs in the test user in debug builds; no auto-retry |
 
 `context.tr()` reads the locale from `Localizations`, so it needs no provider.
@@ -258,8 +261,19 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 
 ## Security
 - Never commit secrets, tokens, credential-bearing URLs, `dart_defines.local.json` or `.env`.
-- Auth tokens live only in `flutter_secure_storage`; SharedPreferences is for non-sensitive
-  cached config only. Never put tokens or card data in provider state that gets logged.
+- Tokens and the signed-in user live only in `SecureStore` (`core/storage/secure_store.dart`),
+  the single wrapper around `flutter_secure_storage`. Add new secure values as a `SecureKey`
+  entry; never call the plugin directly or write key strings elsewhere.
+  SharedPreferences is for non-sensitive cached config only. Never put tokens or card data in
+  provider state that gets logged.
+  - iOS: Keychain `unlocked_this_device`, not synchronizable (no iCloud, no device migration).
+    Keychain survives uninstall, so `SecureStore` wipes it on the first launch after install.
+  - Android: Keystore-wrapped AES-GCM (`resetOnError`). `allowBackup="false"` plus
+    `res/xml/data_extraction_rules.xml` keep app data out of backups and device transfers.
+  - Store the minimum: `UserProfile` holds only id and display name; no phone, roles,
+    permissions or passwords. Only `MOBILE_USER` accounts may sign in to the app.
+  - Ending a session (`ApiClient.clearSession` / `AuthRepository.signOut`) clears every
+    `SecureKey`, not just tokens.
 - Never store, log or display a full card PAN or CVV. Show masked values (`•••• 1087`).
 - Errors shown to users stay generic (see `ApiException`); don't surface raw server bodies.
 - Read `SECURITY.md` before touching auth, Google Sheets or ISO 8583 code.

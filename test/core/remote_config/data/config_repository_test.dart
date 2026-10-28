@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'package:afghan_emi/src/core/network/api_client.dart';
 import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../helpers/test_app.dart';
 
 const _cacheKey = 'afghanpay_mobile_config_v1';
 
@@ -39,8 +40,7 @@ ConfigRepository _repository(http.Response Function() reply) =>
 
 void main() {
   setUp(() {
-    FlutterSecureStorage.setMockInitialValues({});
-    SharedPreferences.setMockInitialValues({});
+    mockSecureStorage();
   });
 
   test('parses and merges a live configuration', () async {
@@ -67,7 +67,7 @@ void main() {
   });
 
   test('falls back to the cached copy when offline', () async {
-    SharedPreferences.setMockInitialValues({_cacheKey: jsonEncode(_payload)});
+    mockSecureStorage(preferences: {_cacheKey: jsonEncode(_payload)});
 
     final config = await _repository(
       () => throw http.ClientException('offline'),

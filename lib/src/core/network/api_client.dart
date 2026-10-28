@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../config/app_environment.dart';
+import '../storage/secure_store.dart';
 
 part 'api_client.g.dart';
 
@@ -14,21 +14,19 @@ part 'api_client.g.dart';
 ApiClient apiClient(Ref ref) {
   final client = ApiClient(
     baseUrl: ref.watch(appEnvironmentProvider).apiBaseUrl,
+    store: ref.watch(secureStoreProvider),
   );
   ref.onDispose(client.dispose);
   return client;
 }
 
 class ApiClient {
-  ApiClient({
-    required this.baseUrl,
-    http.Client? client,
-    FlutterSecureStorage? storage,
-  }) : _client = client ?? http.Client(),
-       _storage = storage ?? const FlutterSecureStorage();
+  ApiClient({required this.baseUrl, http.Client? client, SecureStore? store})
+    : _client = client ?? http.Client(),
+      _store = store ?? SecureStore();
   final String baseUrl;
   final http.Client _client;
-  final FlutterSecureStorage _storage;
+  final SecureStore _store;
   Future<bool>? _refreshInFlight;
 
   Future<Map<String, dynamic>> getJson(
@@ -82,17 +80,15 @@ class ApiClient {
   }
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {
-    await _storage.write(key: 'afghanpay_access_token', value: accessToken);
-    await _storage.write(key: 'afghanpay_refresh_token', value: refreshToken);
+    await _store.write(SecureKey.accessToken, accessToken);
+    await _store.write(SecureKey.refreshToken, refreshToken);
   }
 
-  Future<void> clearTokens() async {
-    await _storage.delete(key: 'afghanpay_access_token');
-    await _storage.delete(key: 'afghanpay_refresh_token');
-  }
+  /// Ends the local session: tokens and the stored user profile.
+  Future<void> clearSession() => _store.clearAll();
 
   Future<bool> hasAccessToken() async =>
-      (await _storage.read(key: 'afghanpay_access_token'))?.isNotEmpty == true;
+      (await _store.read(SecureKey.accessToken))?.isNotEmpty == true;
 
   Future<bool> _refreshTokens() {
     final current = _refreshInFlight;
@@ -103,7 +99,7 @@ class ApiClient {
   }
 
   Future<bool> _performRefresh() async {
-    final refreshToken = await _storage.read(key: 'afghanpay_refresh_token');
+    final refreshToken = await _store.read(SecureKey.refreshToken);
     if (refreshToken == null || refreshToken.isEmpty) return false;
     try {
       final response = await _client
@@ -117,14 +113,14 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        await clearTokens();
+        await clearSession();
         return false;
       }
       final json = jsonDecode(response.body);
       if (json is! Map ||
           json['accessToken'] is! String ||
           json['refreshToken'] is! String) {
-        await clearTokens();
+        await clearSession();
         return false;
       }
       await saveTokens(
@@ -144,7 +140,7 @@ class ApiClient {
     bool json = false,
   }) async {
     final token = authenticated
-        ? await _storage.read(key: 'afghanpay_access_token')
+        ? await _store.read(SecureKey.accessToken)
         : null;
     final headers = <String, String>{'Accept': 'application/json'};
     if (json) headers['Content-Type'] = 'application/json';

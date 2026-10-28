@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:afghan_emi/src/core/network/api_client.dart';
 import 'package:afghan_emi/src/features/payments/data/backend_payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/domain/payment_transaction.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+import '../../../helpers/test_app.dart';
 
 const _request = PaymentRequest(
   operation: PaymentOperation.purchase,
@@ -26,7 +27,7 @@ BackendPaymentGateway _gateway(http.Response Function(http.Request) reply) =>
     );
 
 void main() {
-  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  setUp(mockSecureStorage);
 
   test('posts the request body to /api/v1/transactions', () async {
     late http.Request sent;
