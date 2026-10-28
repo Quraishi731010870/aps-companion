@@ -52,4 +52,4 @@ final class CardVaultProvider
   }
 }
 
-String _$cardVaultHash() => r'2e7d7beafe471e53eaab627e63a071237cd76b31';
+String _$cardVaultHash() => r'e1c23563d8ffbcd2538663be47e34ac8cf95e488';
