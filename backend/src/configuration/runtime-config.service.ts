@@ -19,6 +19,8 @@ const schema = Joi.object({
   CARD_ENCRYPTION_PRIVATE_KEY: Joi.string().base64().allow('').default(''),
   // Base64 of 32 random bytes: AES-256-GCM key for PANs at rest in the card vault.
   CARD_VAULT_KEY: Joi.string().base64().allow('').default(''),
+  // Open customer sign-up (no KYC/OTP yet). Defaults to on outside production only.
+  SELF_REGISTRATION_ENABLED: Joi.boolean(),
 }).unknown(true);
 
 @Injectable()
@@ -38,6 +40,7 @@ export class RuntimeConfig {
   readonly isoApiTimeoutMs: number;
   readonly cardEncryptionPrivateKeyPem: string;
   readonly cardVaultKey: Buffer;
+  readonly selfRegistrationEnabled: boolean;
 
   constructor() {
     const { error, value } = schema.validate(process.env, { abortEarly: false });
@@ -57,6 +60,7 @@ export class RuntimeConfig {
     this.isoApiTimeoutMs = value.ISO_API_TIMEOUT_MS as number;
     this.cardEncryptionPrivateKeyPem = Buffer.from(value.CARD_ENCRYPTION_PRIVATE_KEY as string, 'base64').toString('utf8');
     this.cardVaultKey = Buffer.from(value.CARD_VAULT_KEY as string, 'base64');
+    this.selfRegistrationEnabled = (value.SELF_REGISTRATION_ENABLED as boolean | undefined) ?? this.nodeEnv !== 'production';
     if (this.cardVaultKey.length !== 0 && this.cardVaultKey.length !== 32) throw new Error('CARD_VAULT_KEY must decode to exactly 32 bytes (AES-256).');
     if (this.nodeEnv === 'production' && this.isoApiBaseUrl.startsWith('http://')) throw new Error('ISO_API_BASE_URL must use HTTPS in production.');
   }

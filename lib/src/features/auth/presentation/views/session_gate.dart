@@ -5,6 +5,7 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/widgets/async_views.dart';
 import '../../domain/session_status.dart';
 import '../view_models/session.dart';
+import 'sign_in_screen.dart';
 
 /// Shows [child] only once the session allows backend calls.
 class SessionGate extends ConsumerWidget {
@@ -16,12 +17,7 @@ class SessionGate extends ConsumerWidget {
     final session = ref.watch(sessionProvider);
     return switch (session) {
       AsyncData(value: SessionStatus.signedIn) => child,
-      AsyncData(value: SessionStatus.signedOut) => const _CenteredMessage(
-        icon: Icons.lock_outline_rounded,
-        message:
-            'Sign-in is not available yet. Set TEST_USER_PHONE and '
-            'TEST_USER_PASSWORD in dart_defines.local.json to use the test user.',
-      ),
+      AsyncData(value: SessionStatus.signedOut) => const SignInScreen(),
       AsyncError() => _CenteredMessage(
         icon: Icons.cloud_off_rounded,
         message: 'Could not sign in to the PayAfghan server.',

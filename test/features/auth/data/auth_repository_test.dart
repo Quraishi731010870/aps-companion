@@ -5,6 +5,7 @@ import 'package:afghan_emi/src/core/security/device_key_signer.dart';
 import 'package:afghan_emi/src/core/security/request_signature.dart';
 import 'package:afghan_emi/src/core/storage/secure_store.dart';
 import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
+import 'package:afghan_emi/src/features/auth/domain/auth_failure.dart';
 import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -98,7 +99,7 @@ void main() {
 
     await expectLater(
       auth.signIn(identifier: 'admin@afghanpay.test', password: 'x'),
-      throwsA(isA<SignInRejected>()),
+      throwsA(AuthFailure.notAllowed),
     );
     expect(await auth.hasSession(), isFalse);
     expect(await auth.currentUser(), isNull);
@@ -108,14 +109,90 @@ void main() {
     var calls = 0;
     final auth = repository((_) {
       calls++;
-      return http.Response('', 401);
+      return http.Response('{"code":"INVALID_CREDENTIALS"}', 401);
     });
 
     await expectLater(
       auth.signIn(identifier: '+93790000001', password: 'wrong'),
-      throwsA(isA<ApiException>()),
+      throwsA(AuthFailure.invalidCredentials),
     );
     expect(calls, 1);
+    expect(await auth.hasSession(), isFalse);
+  });
+
+  test('backend error codes become typed failures', () async {
+    final cases = {
+      '{"code":"ACCOUNT_LOCKED"}': AuthFailure.accountLocked,
+      '{"code":"PHONE_IN_USE"}': AuthFailure.phoneInUse,
+      '{"code":"REGISTRATION_DISABLED"}': AuthFailure.registrationClosed,
+      '<html>gateway error</html>': AuthFailure.unknown,
+    };
+    for (final MapEntry(key: body, value: failure) in cases.entries) {
+      final auth = repository((_) => http.Response(body, 409));
+      await expectLater(
+        auth.register(displayName: 'A', phone: '+93701234567', password: 'x'),
+        throwsA(failure),
+        reason: body,
+      );
+    }
+  });
+
+  test(
+    'registering posts the new customer with this device and signs in',
+    () async {
+      late http.Request sent;
+      final auth = repository((request) {
+        sent = request;
+        return http.Response(jsonEncode(_loginResponse()), 201);
+      });
+
+      final profile = await auth.register(
+        displayName: 'New Customer',
+        phone: '+93701234567',
+        password: 'long-password',
+      );
+
+      expect(sent.url.path, '/api/v1/auth/register');
+      expect(jsonDecode(sent.body), {
+        'displayName': 'New Customer',
+        'phone': '+93701234567',
+        'password': 'long-password',
+        'device': (await signer.binding()).toJson(),
+      });
+      expect(profile.id, 'user-1');
+      expect(await auth.hasSession(), isTrue);
+    },
+  );
+
+  test(
+    'signing out revokes the server session and clears the device',
+    () async {
+      final paths = <String>[];
+      final auth = repository((request) {
+        paths.add(request.url.path);
+        return http.Response(jsonEncode(_loginResponse()), 200);
+      });
+      await auth.signIn(identifier: '+93790000001', password: 'secret');
+
+      await auth.signOut();
+
+      expect(paths.last, '/api/v1/auth/logout');
+      expect(await auth.hasSession(), isFalse);
+      expect(await auth.currentUser(), isNull);
+    },
+  );
+
+  test('signing out offline still clears the local session', () async {
+    var online = true;
+    final auth = repository((_) {
+      if (!online) throw http.ClientException('offline');
+      return http.Response(jsonEncode(_loginResponse()), 200);
+    });
+    await auth.signIn(identifier: '+93790000001', password: 'secret');
+    online = false;
+
+    await auth.signOut();
+
     expect(await auth.hasSession(), isFalse);
   });
 

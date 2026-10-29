@@ -12,6 +12,21 @@ Errors follow this shape:
 
 List endpoints use server-side pagination with a bounded page size. Transaction and customer searching/filtering is executed in PostgreSQL rather than loading entire tables into the browser.
 
+## Customer status controls (admin)
+
+Operators with `customers.manage` can activate, deactivate, block and unblock a customer and the banking data they hold. Each call takes `{ action, reason }`, where `action` is `activate`, `deactivate`, `block` or `unblock` and `reason` is 3–500 characters. It returns `{ id, status }` and writes an audit record with the old status, new status and reason.
+
+| Method | Path | Applies to |
+|---|---|---|
+| PATCH | `/api/v1/customers/:id/status` | The customer and their sign-in user |
+| PATCH | `/api/v1/customers/:id/accounts/:accountId/status` | A wallet account |
+| PATCH | `/api/v1/customers/:id/cards/:cardId/status` | A saved card (not one the customer removed) |
+| PATCH | `/api/v1/customers/:id/devices/:deviceId/status` | A bound device |
+
+Rules (`backend/src/customers/status-control.ts`): `activate` → `ACTIVE` from `PENDING`, `DISABLED` or `LOCKED`; `deactivate` → `DISABLED`; `block` → `BLOCKED`; `unblock` → `ACTIVE`, and only from `BLOCKED`. `CLOSED` accepts no action. A transition the rules don't allow returns `409 STATUS_TRANSITION_INVALID`, and an item that isn't the customer's returns `404`. `GET /api/v1/customers/:id` returns `actions` for the customer and for each account, card and device, listing what may be applied now.
+
+Effects: a customer who isn't active can't sign in, and their sessions are revoked. A device that isn't active has its sessions revoked and its signed requests refused. Payments return `403 CUSTOMER_UNAVAILABLE`, `403 ACCOUNT_UNAVAILABLE` (a financial payment with no active wallet) or `403 CARD_UNAVAILABLE`. A blocked or deactivated card stays refused when the customer links it again or types it in as a one-off card.
+
 ## Cards (mobile customers)
 
 Card numbers are never sent or stored in clear. See `backend/src/cards/card-envelope.ts`. Only the card number is vaulted: the expiry is checked when linking and then discarded, and an envelope carrying a CVV, PIN or track data is rejected (`INVALID_CARD`).
@@ -20,7 +35,7 @@ Card numbers are never sent or stored in clear. See `backend/src/cards/card-enve
 |---|---|---|
 | GET | `/api/v1/cards/encryption-key` | RSA-OAEP-256 public key as a JWK; `kid` is its RFC 7638 thumbprint (pinned by the app) |
 | POST | `/api/v1/cards` | `{ encryptedCard }` → vaults the card number, returns `{ token, maskedPan, holderName }`. An expired card returns `400 CARD_EXPIRED` |
-| GET | `/api/v1/cards` | The caller's saved cards (masked) |
+| GET | `/api/v1/cards` | The caller's active saved cards (masked); cards an operator blocked or deactivated are left out |
 | DELETE | `/api/v1/cards/:token` | Revoke a saved card |
 
 `POST /api/v1/transactions` accepts `cardToken` (saved card) or `encryptedCard` (one-off card) and records only the masked number. A raw card number in `source` returns `400 CARD_NUMBER_NOT_ENCRYPTED`. Card endpoints return `503 CARD_ENCRYPTION_NOT_CONFIGURED` until `CARD_ENCRYPTION_PRIVATE_KEY` and `CARD_VAULT_KEY` are set.
@@ -44,6 +59,7 @@ AFGHANPAY-ED25519-V1\n<METHOD>\n<path?query as sent>\n<timestamp>\n<nonce>\n<sha
 ```
 
 - `POST /api/v1/auth/login` takes `{ identifier, password, device: { installationId, platform, publicKey } }`, where `platform` is `ANDROID`, `IOS` or `WEB` and `publicKey` is the raw 32-byte Ed25519 key in base64url. The request must be signed with that key. Only `MOBILE_USER` accounts may sign in. The device is bound to the customer, and a known installation can't switch keys (`DEVICE_KEY_MISMATCH`).
+- `POST /api/v1/auth/register` (self sign-up, signed the same way) takes `{ displayName, phone, password, device }`. `phone` must be `+937XXXXXXXX` and `password` at least 10 characters. It creates a `MOBILE_USER`, a customer with KYC `PENDING` and an empty AFN wallet, binds the device and returns the same body as login. `409 PHONE_IN_USE` for a known number. It's off when `NODE_ENV=production` unless `SELF_REGISTRATION_ENABLED=true` (`404 REGISTRATION_DISABLED`); there's no KYC/OTP yet.
 - `POST /api/v1/auth/refresh` and every authenticated request must be signed by the device bound to the session. Admin cookie sessions aren't device-bound.
 - Failures return `401` with `DEVICE_SIGNATURE_REQUIRED`, `DEVICE_SIGNATURE_INVALID`, `DEVICE_SIGNATURE_EXPIRED`, `DEVICE_SIGNATURE_REPLAYED`, `DEVICE_NOT_BOUND` or `DEVICE_KEY_MISMATCH`. Invalid signatures and key mismatches are recorded in `security_events`.
 - Transactions store the signing `device_id` and `device_signature`.

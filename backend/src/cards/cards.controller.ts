@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, NotFoundException, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AccountStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { randomBytes } from 'node:crypto';
@@ -40,6 +41,9 @@ export class CardsController {
     }
     const vault = this.crypto.vaultCipher();
     const fingerprint = vault.fingerprint(card.pan);
+    // Re-linking must not lift an operator's block or deactivation.
+    const existing = await this.prisma.savedCard.findUnique({ where: { customerId_panFingerprint: { customerId, panFingerprint: fingerprint } }, select: { status: true } });
+    if (existing && existing.status !== AccountStatus.ACTIVE) throw new ForbiddenException({ code: 'CARD_UNAVAILABLE', message: 'This card cannot be used. Contact support.' });
     const data = {
       panCiphertext: vault.encrypt(card.pan, customerId),
       maskedPan: maskPan(card.pan),
@@ -58,7 +62,7 @@ export class CardsController {
 
   @Get() async list(@Req() request: AuthenticatedRequest): Promise<SavedCardView[]> {
     const customerId = await this.customerId(request);
-    const cards = await this.prisma.savedCard.findMany({ where: { customerId, revokedAt: null }, orderBy: { createdAt: 'desc' } });
+    const cards = await this.prisma.savedCard.findMany({ where: { customerId, revokedAt: null, status: AccountStatus.ACTIVE }, orderBy: { createdAt: 'desc' } });
     return cards.map(view);
   }
 

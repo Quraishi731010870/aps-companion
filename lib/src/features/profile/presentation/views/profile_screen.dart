@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../admin/presentation/views/google_sheets_screen.dart';
 import '../../../admin/presentation/views/management_screen.dart';
+import '../../../../core/config/app_environment.dart';
 import '../../../auth/presentation/view_models/current_user.dart';
+import '../../../auth/presentation/view_models/session.dart';
 import '../../../settings/domain/biometric_outcome.dart';
 import '../../../settings/presentation/view_models/settings.dart';
 import '../../../settings/presentation/views/limits_screen.dart';
@@ -216,6 +218,12 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (ref.watch(
+            appEnvironmentProvider.select((e) => e.hasBackend),
+          )) ...[
+            const SizedBox(height: 14),
+            const _SignOutTile(),
+          ],
           const SizedBox(height: 14),
           Center(
             child: Text(
@@ -251,6 +259,37 @@ class ProfileScreen extends ConsumerWidget {
     if (message == null) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(context.tr(message))));
+  }
+}
+
+class _SignOutTile extends ConsumerStatefulWidget {
+  const _SignOutTile();
+
+  @override
+  ConsumerState<_SignOutTile> createState() => _SignOutTileState();
+}
+
+class _SignOutTileState extends ConsumerState<_SignOutTile> {
+  bool _signingOut = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = Theme.of(context).colorScheme.error;
+    return Card(
+      child: ListTile(
+        enabled: !_signingOut,
+        leading: Icon(Icons.logout_rounded, color: error),
+        title: Text(
+          context.tr('Sign out'),
+          style: TextStyle(color: error, fontWeight: FontWeight.w800),
+        ),
+        onTap: () async {
+          setState(() => _signingOut = true);
+          // The session gate swaps to the sign-in screen once this completes.
+          await ref.read(sessionProvider.notifier).signOut();
+        },
+      ),
+    );
   }
 }
 

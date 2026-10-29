@@ -222,4 +222,36 @@ void main() {
 
     expect(refreshes, 1);
   });
+
+  test('keeps only the error code from a failed response', () async {
+    Future<ApiException> fail(String body) =>
+        ApiClient(
+              baseUrl: _base,
+              client: MockClient((_) async => http.Response(body, 409)),
+            )
+            .getJson('/x')
+            .then<ApiException>(
+              (_) => throw StateError('no error'),
+              onError: (Object e) => e as ApiException,
+            );
+
+    final coded = await fail(
+      '{"code":"PHONE_IN_USE","message":"internal detail"}',
+    );
+    expect(coded.code, 'PHONE_IN_USE');
+    expect(coded.toString(), isNot(contains('internal detail')));
+    expect((await fail('<html>oops</html>')).code, isNull);
+    expect((await fail('{"code":"<script>"}')).code, isNull);
+  });
+
+  test('a rejected refresh announces that the session ended', () async {
+    final api = ApiClient(
+      baseUrl: _base,
+      client: MockClient((_) async => http.Response('', 401)),
+    );
+    final ended = expectLater(api.sessionEnded, emits(null));
+
+    await expectLater(api.getJson('/private'), throwsA(isA<ApiException>()));
+    await ended;
+  });
 }

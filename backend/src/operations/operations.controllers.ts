@@ -1,11 +1,12 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AccountStatus, NotificationStatus, Prisma } from '@prisma/client';
 import argon2 from 'argon2';
-import { Type } from 'class-transformer';
-import { IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import type { AuthenticatedRequest } from '../auth/auth.types';
+import { availableActions } from '../customers/status-control';
 import { PrismaService } from '../database/prisma.service';
 import { HealthService } from '../health/health.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -13,6 +14,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 class PageQuery { @IsOptional() @Type(() => Number) @IsInt() @Min(0) page = 0; @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 25; @IsOptional() @IsString() @MaxLength(200) search?: string; }
 class CreateUserDto { @IsEmail() email!: string; @IsString() @MinLength(2) @MaxLength(160) displayName!: string; @IsString() @MinLength(12) @MaxLength(200) developmentPassword!: string; @IsString() roleCode!: string; }
 class UpdateUserDto { @IsOptional() @IsString() @MinLength(2) @MaxLength(160) displayName?: string; @IsOptional() @IsEmail() email?: string; }
+class CustomerQuery extends PageQuery { @IsOptional() @Transform(({ value }) => typeof value === 'string' ? value.toUpperCase() : value) @IsEnum(AccountStatus) status?: AccountStatus; @IsOptional() @IsIn(['createdAt:desc', 'createdAt:asc', 'name:asc', 'name:desc']) sort = 'createdAt:desc'; @IsOptional() @IsDateString() dateFrom?: string; @IsOptional() @IsDateString() dateTo?: string; @IsOptional() @IsDateString() lastActivityFrom?: string; @IsOptional() @IsDateString() lastActivityTo?: string; }
 class StatusDto { @IsEnum(AccountStatus) status!: AccountStatus; }
 class NotificationDto { @IsString() @MaxLength(200) title!: string; @IsString() @MaxLength(4000) body!: string; @IsOptional() @IsObject() data?: Record<string, unknown>; }
 
@@ -36,8 +38,24 @@ export class UsersController {
 @ApiTags('customers') @Controller({ path: 'customers', version: '1' }) @Permissions('customers.view')
 export class CustomersController {
   constructor(private readonly prisma: PrismaService) {}
-  @Get() async list(@Query() query: PageQuery) { const where = query.search ? { OR: [{ customerNo: { contains: query.search, mode: 'insensitive' as const } }, { user: { displayName: { contains: query.search, mode: 'insensitive' as const } } }, { user: { phone: { contains: query.search } } }] } : {}; const [rows, total] = await this.prisma.$transaction([this.prisma.customer.findMany({ where, skip: query.page * query.pageSize, take: query.pageSize, orderBy: { createdAt: 'desc' }, include: { user: true } }), this.prisma.customer.count({ where })]); return { items: rows.map((row) => ({ id: row.id, name: row.user.displayName, phoneMasked: row.user.phone?.replace(/.(?=.{4})/g, '*'), status: row.status.toLowerCase(), createdAt: row.createdAt, lastActivityAt: row.updatedAt })), total, page: query.page, pageSize: query.pageSize }; }
-  @Get(':id') async detail(@Param('id') id: string) { const row = await this.prisma.customer.findUnique({ where: { id }, include: { user: { include: { devices: true } }, accounts: true, transactions: { take: 20, orderBy: { createdAt: 'desc' }, include: { transactionType: true } } } }); if (!row) throw new NotFoundException({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found.' }); return { id: row.id, name: row.user.displayName, phoneMasked: row.user.phone?.replace(/.(?=.{4})/g, '*'), emailMasked: row.user.email?.replace(/^(.{2}).*(@.*)$/, '$1***$2'), status: row.status.toLowerCase(), createdAt: row.createdAt, accounts: row.accounts.map((account) => ({ id: account.id, type: account.type, maskedNumber: account.accountNo.replace(/.(?=.{4})/g, '*'), currency: account.currency, status: account.status.toLowerCase() })), devices: row.user.devices, activity: row.transactions.map((transaction) => ({ id: transaction.transactionId, event: `${transaction.transactionType.name}: ${transaction.status}`, at: transaction.createdAt })) }; }
+  @Get() async list(@Query() query: CustomerQuery) {
+    const where: Prisma.CustomerWhereInput = { status: query.status, createdAt: range(query.dateFrom, query.dateTo), updatedAt: range(query.lastActivityFrom, query.lastActivityTo), OR: query.search ? [{ customerNo: { contains: query.search, mode: 'insensitive' } }, { user: { displayName: { contains: query.search, mode: 'insensitive' } } }, { user: { phone: { contains: query.search } } }] : undefined };
+    const [field, direction] = query.sort.split(':'); const order = direction === 'asc' ? 'asc' : 'desc';
+    const orderBy: Prisma.CustomerOrderByWithRelationInput = field === 'name' ? { user: { displayName: order } } : { createdAt: order };
+    const [rows, total] = await this.prisma.$transaction([this.prisma.customer.findMany({ where, skip: query.page * query.pageSize, take: query.pageSize, orderBy, include: { user: true } }), this.prisma.customer.count({ where })]);
+    return { items: rows.map((row) => ({ id: row.id, customerNo: row.customerNo, name: row.user.displayName, phoneMasked: maskPhone(row.user.phone), status: row.status.toLowerCase(), createdAt: row.createdAt, lastActivityAt: row.updatedAt })), total, page: query.page, pageSize: query.pageSize };
+  }
+  /** Masked data only: no PAN, device keys or push tokens leave this endpoint. `actions` are what customers.manage may apply. */
+  @Get(':id') async detail(@Param('id', ParseUUIDPipe) id: string) {
+    const row = await this.prisma.customer.findUnique({ where: { id }, include: { user: { include: { devices: { orderBy: { createdAt: 'desc' } } } }, accounts: { orderBy: { createdAt: 'asc' } }, savedCards: { where: { revokedAt: null }, orderBy: { createdAt: 'desc' } }, transactions: { take: 20, orderBy: { createdAt: 'desc' }, include: { transactionType: true } } } });
+    if (!row) throw new NotFoundException({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found.' });
+    const control = (status: AccountStatus) => ({ status: status.toLowerCase(), actions: availableActions(status) });
+    return { id: row.id, customerNo: row.customerNo, name: row.user.displayName, phoneMasked: maskPhone(row.user.phone), emailMasked: row.user.email?.replace(/^(.{2}).*(@.*)$/, '$1***$2'), kycStatus: row.kycStatus.toLowerCase(), ...control(row.status), createdAt: row.createdAt, lastActivityAt: row.updatedAt,
+      accounts: row.accounts.map((account) => ({ id: account.id, type: account.type, maskedNumber: account.accountNo.replace(/.(?=.{4})/g, '*'), currency: account.currency, availableBalance: Number(account.availableBalance), ...control(account.status) })),
+      cards: row.savedCards.map((card) => ({ id: card.id, maskedPan: card.maskedPan, createdAt: card.createdAt, ...control(card.status) })),
+      devices: row.user.devices.map((device) => ({ id: device.id, platform: device.platform, name: device.name, boundAt: device.boundAt, lastSeenAt: device.lastSeenAt, ...control(device.status) })),
+      activity: row.transactions.map((transaction) => ({ id: transaction.transactionId, event: `${transaction.transactionType.name}: ${transaction.status}`, at: transaction.createdAt })) };
+  }
 }
 
 @ApiTags('notifications') @Controller({ path: 'notifications', version: '1' })
@@ -62,3 +80,7 @@ export class MonitoringController {
 
 @ApiTags('reports') @Controller({ path: 'reports', version: '1' }) @Permissions('reports.view')
 export class ReportsController { constructor(private readonly prisma: PrismaService) {} @Get('transactions') transactions() { return this.prisma.transaction.groupBy({ by: ['status', 'currency'], _count: true, _sum: { amount: true } }); } @Get('users') async users() { return { total: await this.prisma.user.count(), byStatus: await this.prisma.user.groupBy({ by: ['status'], _count: true }) }; } }
+
+function maskPhone(phone: string | null): string | undefined { return phone?.replace(/.(?=.{4})/g, '*'); }
+/** Whole days: `to` includes the end of that day. */
+function range(from?: string, to?: string): Prisma.DateTimeFilter | undefined { return from || to ? { gte: from ? new Date(from) : undefined, lt: to ? new Date(new Date(to).getTime() + 86_400_000) : undefined } : undefined; }

@@ -4,10 +4,11 @@ import { ShieldOutlined } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { adminApi } from '../api/adminApi'
+import { devLogin } from '../config/devLogin'
 
 export function LoginPage() {
-  const [operator, setOperator] = useState('')
-  const [password, setPassword] = useState('')
+  const [operator, setOperator] = useState(devLogin.operator)
+  const [password, setPassword] = useState(devLogin.password)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()

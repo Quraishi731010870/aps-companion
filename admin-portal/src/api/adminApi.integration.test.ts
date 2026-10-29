@@ -6,6 +6,22 @@ function json(body: unknown, status = 200) {
 }
 
 describe('FetchAdminApi security and request contract', () => {
+  it('calls the global fetch unbound, as browsers require', async () => {
+    // Native fetch throws "Illegal invocation" when called with another object as `this`.
+    const strictFetch = vi.fn(function (this: unknown) {
+      if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation')
+      return Promise.resolve(json({ csrfToken: 'csrf-test' }))
+    })
+    vi.stubGlobal('fetch', strictFetch)
+    try {
+      const api = new FetchAdminApi('http://localhost:8080')
+      await expect(api.login('operator', 'password-value')).resolves.toBeDefined()
+      expect(strictFetch).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('loads an HttpOnly-cookie session and sends no browser bearer token', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ csrfToken: 'csrf-test' })).mockResolvedValueOnce(json({ adminId: 'a-1', displayName: 'Operator', role: 'Operations', permissions: ['transactions.view'], expiresAt: '2026-10-01T00:00:00Z' }))
     const api = new FetchAdminApi('http://localhost:8080', fetcher)
@@ -49,5 +65,22 @@ describe('FetchAdminApi security and request contract', () => {
     window.addEventListener('admin:unauthorized', expired, { once: true })
     await expect(unauthorizedApi.getDashboard()).rejects.toBeInstanceOf(AdminApiError)
     expect(expired).toHaveBeenCalledOnce()
+  })
+
+  it('sends status actions with a reason and CSRF token to the matching resource', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ csrfToken: 'csrf-test' })).mockImplementation(async () => json({ id: 'x', status: 'blocked' }))
+    const api = new FetchAdminApi('http://localhost:8080', fetcher)
+    await api.updateStatus({ kind: 'customer', customerId: 'c-1' }, 'block', 'Suspected fraud')
+    await api.updateStatus({ kind: 'card', customerId: 'c-1', id: 'card-1' }, 'unblock', 'Cleared')
+    const [, customerCall, cardCall] = fetcher.mock.calls
+    expect(customerCall[0]).toBe('http://localhost:8080/api/v1/customers/c-1/status')
+    expect(customerCall[1]).toMatchObject({ method: 'PATCH', body: JSON.stringify({ action: 'block', reason: 'Suspected fraud' }), headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf-test' }) })
+    expect(cardCall[0]).toBe('http://localhost:8080/api/v1/customers/c-1/cards/card-1/status')
+  })
+
+  it('reports a refused status transition as a conflict', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ csrfToken: 'csrf-test' })).mockResolvedValueOnce(json({ code: 'STATUS_TRANSITION_INVALID' }, 409))
+    const api = new FetchAdminApi('http://localhost:8080', fetcher)
+    await expect(api.updateStatus({ kind: 'device', customerId: 'c-1', id: 'd-1' }, 'activate', 'Retry')).rejects.toMatchObject({ code: 'conflict' })
   })
 })

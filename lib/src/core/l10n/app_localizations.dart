@@ -205,4 +205,36 @@ const _dari = <String, String>{
       'کارت ذخیره نشد. لطفاً دوباره تلاش کنید.',
   'Could not sign in to the PayAfghan server.':
       'ورود به سرور پی‌افغان ممکن نشد.',
+  'Sign in to PayAfghan': 'ورود به پی‌افغان',
+  'Use the phone number and password of your wallet.':
+      'شماره تلفن و رمز عبور کیف پول خود را وارد کنید.',
+  'Phone number': 'شماره تلفن',
+  'Password': 'رمز عبور',
+  'Show password': 'نمایش رمز عبور',
+  'Hide password': 'پنهان کردن رمز عبور',
+  'Enter an Afghan mobile number': 'یک شماره موبایل افغانستان وارد کنید',
+  'Enter your password': 'رمز عبور خود را وارد کنید',
+  'Sign in': 'ورود',
+  'New here? Create an account': 'تازه‌وارد هستید؟ حساب بسازید',
+  'Create your account': 'حساب خود را بسازید',
+  'For testing: a new customer with an empty AFN wallet.':
+      'برای آزمایش: یک مشتری جدید با کیف پول خالی افغانی.',
+  'Full name': 'نام کامل',
+  'Enter your name': 'نام خود را وارد کنید',
+  'Use at least 10 characters': 'حداقل ۱۰ کاراکتر استفاده کنید',
+  'Passwords do not match': 'رمزهای عبور یکسان نیستند',
+  'Create account': 'ساختن حساب',
+  'The phone number or password is incorrect.':
+      'شماره تلفن یا رمز عبور نادرست است.',
+  'Too many attempts. Try again in 15 minutes.':
+      'تلاش‌های زیاد. ۱۵ دقیقه بعد دوباره تلاش کنید.',
+  'This phone number is already registered. Sign in instead.':
+      'این شماره قبلاً ثبت شده است. لطفاً وارد شوید.',
+  'Sign-up is not available.': 'ثبت‌نام در دسترس نیست.',
+  'This account cannot sign in to the mobile app.':
+      'این حساب نمی‌تواند وارد اپلیکیشن موبایل شود.',
+  'Could not reach the PayAfghan server. Check your connection.':
+      'اتصال به سرور پی‌افغان ممکن نشد. اتصال خود را بررسی کنید.',
+  'Something went wrong. Please try again.':
+      'مشکلی پیش آمد. لطفاً دوباره تلاش کنید.',
 };

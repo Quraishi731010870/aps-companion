@@ -23,8 +23,11 @@ Android emulator reaches the local API at `http://10.0.2.2:8081`; browser/deskto
 
 ### Testing against the local backend (test user)
 
-There is no sign-in screen yet. Debug builds sign in automatically as the seeded test
-user (**Demo Customer 001**) when `dart_defines.local.json` (git-ignored) contains:
+With a backend configured, the app opens on the **sign-in screen** (phone + password).
+Debug builds pre-fill the seeded test user (**Demo Customer 001**) but never sign in on
+their own; they also offer **Create account**, which registers a new customer with an
+empty wallet (`POST /api/v1/auth/register`, off in production). **Sign out** is in
+Profile. `dart_defines.local.json` (git-ignored):
 
 ```json
 {
@@ -41,8 +44,9 @@ user (**Demo Customer 001**) when `dart_defines.local.json` (git-ignored) contai
    Run and Debug; `.vscode/launch.json` (git-ignored, per developer) passes the same flag.
    **(offline mock)** runs with no defines and the mock gateway.
 
-Release builds ignore `TEST_USER_*` even if passed. Sign-in is never retried
-automatically: 5 wrong passwords lock the account for 15 minutes. Payments stay
+Release builds ignore `TEST_USER_*` and hide sign-up. Sign-in is never retried
+automatically: 5 wrong passwords lock the account for 15 minutes. When the server rejects
+the refresh token the app returns to sign-in. Payments stay
 `PENDING` because no processor runs locally.
 
 ## Engineering principles (apply to every change)
@@ -98,7 +102,7 @@ lib/
 
 | Feature | Owns |
 |---|---|
-| `auth` | `SessionStatus`, `UserProfile`, `AuthRepository` (login, secure token + profile storage, sign-out), `Session` and current-user view models, `SessionGate` |
+| `auth` | `SessionStatus`, `UserProfile`, `AuthFailure`, `PhoneNumber`, `AuthRepository` (login, sign-up, secure token + profile storage, sign-out), `Session` and current-user view models, `SessionGate`, sign-in / sign-up screens |
 | `payments` | `PaymentOperation`/`PaymentRequest`/`PaymentResult`, `PaymentGateway` + backend/mock/Sheets gateways, idempotency keys, card numbers, payment flow, card linking, QR scanner, receipt |
 | `activity` | Wallet history, CSV export, `ActivityTile` |
 | `home` | Home dashboard |
@@ -191,7 +195,7 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `settingsProvider` | `features/settings/presentation/view_models` | Language, biometric flag, transaction limits |
 | `authRepositoryProvider` | `features/auth/data` | Mobile login; stores tokens via `ApiClient` |
 | `currentUserProvider`, `displayedUserProvider` | `features/auth/presentation/view_models` | Signed-in `UserProfile` from secure storage; UI falls back to the demo user offline |
-| `sessionProvider` | `features/auth/presentation/view_models` | Signed in / out; auto-signs in the test user in debug builds; no auto-retry |
+| `sessionProvider` | `features/auth/presentation/view_models` | Signed in / out; `signIn`, `register`, `signOut`; returns to signed out when the server ends the session; no auto-retry |
 
 `context.tr()` reads the locale from `Localizations`, so it needs no provider.
 

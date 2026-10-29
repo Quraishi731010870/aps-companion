@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/config/app_environment.dart';
+import '../../../../core/network/api_client.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/session_status.dart';
 
@@ -10,30 +11,57 @@ Duration? _noRetry(int retryCount, Object error) => null;
 
 /// ViewModel deciding whether the app can reach authenticated endpoints.
 ///
-/// Until the sign-in screen exists, debug builds sign in as the seeded test
-/// user from `TEST_USER_PHONE` / `TEST_USER_PASSWORD` on every launch, which
-/// also replaces any expired tokens.
+/// Signed in when tokens are stored (or offline on the mock gateway);
+/// otherwise the sign-in screen is shown. Returns to signed out when the
+/// server rejects the refresh token.
 ///
-/// Never retried automatically: repeated failed sign-ins would lock the
-/// account (5 attempts on the backend). Retry is the user's choice.
+/// Sign-in is never retried automatically: repeated failures would lock the
+/// account (5 attempts on the backend).
 @Riverpod(keepAlive: true, retry: _noRetry)
 class Session extends _$Session {
   @override
   Future<SessionStatus> build() async {
-    final environment = ref.watch(appEnvironmentProvider);
-    if (!environment.hasBackend) return SessionStatus.signedIn;
-
-    final repository = ref.watch(authRepositoryProvider);
-    if (environment.hasTestUser) {
-      await repository.signIn(
-        identifier: environment.testUserIdentifier,
-        password: environment.testUserPassword,
-      );
+    if (!ref.watch(appEnvironmentProvider).hasBackend) {
       return SessionStatus.signedIn;
     }
-    return await repository.hasSession()
+    final ended = ref.watch(apiClientProvider).sessionEnded.listen((_) {
+      state = const AsyncData(SessionStatus.signedOut);
+    });
+    ref.onDispose(ended.cancel);
+    return await ref.watch(authRepositoryProvider).hasSession()
         ? SessionStatus.signedIn
         : SessionStatus.signedOut;
+  }
+
+  /// Throws `AuthFailure` on failure; the state is unchanged then.
+  Future<void> signIn({
+    required String identifier,
+    required String password,
+  }) async {
+    await ref
+        .read(authRepositoryProvider)
+        .signIn(identifier: identifier, password: password);
+    if (!ref.mounted) return;
+    state = const AsyncData(SessionStatus.signedIn);
+  }
+
+  /// Creates a customer and signs in. Throws `AuthFailure` on failure.
+  Future<void> register({
+    required String displayName,
+    required String phone,
+    required String password,
+  }) async {
+    await ref
+        .read(authRepositoryProvider)
+        .register(displayName: displayName, phone: phone, password: password);
+    if (!ref.mounted) return;
+    state = const AsyncData(SessionStatus.signedIn);
+  }
+
+  Future<void> signOut() async {
+    await ref.read(authRepositoryProvider).signOut();
+    if (!ref.mounted) return;
+    state = const AsyncData(SessionStatus.signedOut);
   }
 
   Future<void> retry() async {
