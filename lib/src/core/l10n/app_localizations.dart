@@ -30,6 +30,10 @@ const _dari = <String, String>{
   'Change': 'تغییر',
   'No card linked': 'هیچ کارتی وصل نیست',
   'Link your card': 'کارت خود را وصل کنید',
+  'Your linked card': 'کارت وصل‌شده شما',
+  'Replace card': 'تعویض کارت',
+  'Cardholder': 'دارنده کارت',
+  'Expiry': 'تاریخ انقضا',
   'Connect an APS-enabled card to use bank pull and card payments.':
       'برای پرداخت، یک کارت فعال APS را وصل کنید.',
   'Connect an APS-enabled bank card to your wallet':

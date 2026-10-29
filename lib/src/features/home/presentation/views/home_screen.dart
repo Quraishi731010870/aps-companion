@@ -11,6 +11,7 @@ import '../../../payments/domain/payment_transaction.dart';
 import '../../../payments/presentation/view_models/linked_card.dart';
 import '../../../payments/presentation/views/card_link_sheet.dart';
 import '../../../payments/presentation/views/payment_flow.dart';
+import '../../../payments/presentation/views/saved_card_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.onNotificationsPressed});
@@ -212,7 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     : context.tr('Linked securely to your PayAfghan wallet'),
               ),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: _linkCard,
+              onTap: _openCard,
             ),
           ),
           const SizedBox(height: 23),
@@ -309,6 +310,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+  }
+
+  /// Shows the linked card, or the link form when there is none yet.
+  Future<void> _openCard() async {
+    final card = ref.read(linkedCardProvider).value;
+    if (card == null) return _linkCard();
+    final replace = await showSavedCardSheet(context, card);
+    if (replace == true && mounted) await _linkCard();
   }
 
   Future<void> _linkCard() async {
