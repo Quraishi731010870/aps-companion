@@ -27,8 +27,13 @@ class CardDetails {
     return (int.parse(match.group(1)!), 2000 + int.parse(match.group(2)!));
   }
 
-  /// Plaintext that goes inside the encrypted envelope. [sentAt] lets the
-  /// backend reject replays of a captured envelope.
+  /// True once the expiry month has fully passed.
+  static bool isExpired(int month, int year, DateTime now) =>
+      year < now.year || (year == now.year && month < now.month);
+
+  /// Plaintext that goes inside the encrypted envelope. The backend only
+  /// checks the expiry and never stores it; a CVV is never sent. [sentAt]
+  /// lets the backend reject replays of a captured envelope.
   Map<String, Object> toPayload(DateTime sentAt) => {
     'pan': pan,
     'expMonth': ?expiryMonth,

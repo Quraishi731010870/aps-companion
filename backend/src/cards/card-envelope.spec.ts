@@ -1,5 +1,5 @@
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
-import { CardEnvelope, EnvelopeError, jwkThumbprint, looksLikePan, maskPan, MAX_ENVELOPE_AGE_MS, openEnvelope, RsaPublicJwk, sealEnvelope, VaultCipher } from './card-envelope';
+import { CardEnvelope, EnvelopeError, isExpired, jwkThumbprint, looksLikePan, maskPan, MAX_ENVELOPE_AGE_MS, openEnvelope, RsaPublicJwk, sealEnvelope, VaultCipher } from './card-envelope';
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 3072 });
 const kid = jwkThumbprint(publicKey.export({ format: 'jwk' }) as RsaPublicJwk);
@@ -49,6 +49,21 @@ describe('card envelope', () => {
   it('rejects replays older than the allowed window', () => {
     const old = sealEnvelope(publicKey, kid, { ...card, ts: Date.now() - MAX_ENVELOPE_AGE_MS - 1000 });
     expect(errorCode(() => openEnvelope(privateKey, kid, old))).toBe('EXPIRED_ENVELOPE');
+  });
+
+  it('never accepts a CVV or other sensitive authentication data', () => {
+    for (const field of ['cvv', 'CVV2', 'cvc', 'securityCode', 'pin', 'track2']) {
+      const envelope = sealEnvelope(publicKey, kid, { ...card, [field]: '123' } as never);
+      expect(errorCode(() => openEnvelope(privateKey, kid, envelope))).toBe('INVALID_CARD');
+    }
+  });
+
+  it('treats a card as expired only after its expiry month', () => {
+    const now = new Date(Date.UTC(2026, 9, 29));
+    expect(isExpired(10, 2026, now)).toBe(false);
+    expect(isExpired(9, 2026, now)).toBe(true);
+    expect(isExpired(1, 2027, now)).toBe(false);
+    expect(isExpired(12, 2025, now)).toBe(true);
   });
 
   it('rejects malformed card data', () => {

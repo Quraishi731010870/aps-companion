@@ -13,6 +13,14 @@ rotation, and database-backed session revocation. Distributed rate limiting,
 MFA/SSO, password recovery, and an external security assessment remain
 production gates. UI gates do not replace API authorization.
 
+Mobile requests are device-bound: the app signs each request (method, path,
+timestamp, nonce, body hash) with a per-installation Ed25519 key registered at
+login, and the backend verifies it, rejects replays and stale timestamps, and
+records the signing device on each transaction (see `API.md`). The key is
+software-generated and kept in the Keychain / Keystore-wrapped storage, not in
+the Secure Enclave or StrongBox, neither of which supports Ed25519. There is
+no attestation or new-device cooling period yet.
+
 The Google Apps Script / Sheets pathways are prototype-only and are not used by
 the portal. Do not attach them to administrator sign-in or any financial
 operation. No supported transaction-mutation endpoint was found.

@@ -6,6 +6,7 @@ import '../../data/payment_gateway_provider.dart';
 import '../../domain/card_details.dart';
 import '../../domain/idempotency_key.dart';
 import '../../domain/payment_transaction.dart';
+import 'wallet.dart';
 
 part 'payment_submission.g.dart';
 
@@ -74,7 +75,11 @@ class PaymentSubmission extends _$PaymentSubmission {
     if (!ref.mounted) return;
     _lastFailed = result.hasError ? (attempt: attempt, key: key) : null;
     state = result;
-    if (result.hasValue) ref.invalidate(activitiesProvider);
+    if (result.hasValue) {
+      ref
+        ..invalidate(activitiesProvider)
+        ..invalidate(walletProvider);
+    }
   }
 
   /// Retrying the same payment reuses its key so the backend can return the

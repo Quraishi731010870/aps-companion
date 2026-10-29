@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../domain/payment_gateway.dart';
 import '../domain/payment_transaction.dart';
+import '../domain/wallet.dart';
 
 class GoogleSheetsGateway implements PaymentGateway {
   GoogleSheetsGateway({
@@ -68,12 +69,17 @@ class GoogleSheetsGateway implements PaymentGateway {
         source: '${row['source'] ?? ''}',
         destination: '${row['destination'] ?? ''}',
         rrn: '${row['rrn'] ?? row['transactionId'] ?? ''}',
-        cardNumber: '${row['cardNumber'] ?? '•••• 1087'}',
+        cardNumber: '${row['cardNumber'] ?? ''}',
         currency: '${row['currency'] ?? 'AFN'}',
         fee: double.tryParse('${row['fee']}') ?? 0,
       );
     }).toList();
   }
+
+  /// The Sheets prototype has no wallet ledger.
+  @override
+  Future<Wallet> fetchWallet() =>
+      Future.error(UnsupportedError('Google Sheets has no wallet.'));
 
   Map<String, dynamic> _decode(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {

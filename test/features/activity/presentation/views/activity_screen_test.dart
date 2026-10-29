@@ -1,5 +1,6 @@
 import 'package:afghan_emi/src/features/activity/domain/activity_csv.dart';
 import 'package:afghan_emi/src/features/activity/presentation/views/activity_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +13,23 @@ void main() {
 
     expect(find.text('Salary payment'), findsOneWidget);
     expect(find.text('Cash deposit'), findsOneWidget);
+  });
+
+  testWidgets('no transactions shows an empty state and disables export', (
+    tester,
+  ) async {
+    await pumpScreen(
+      tester,
+      const ActivityScreen(),
+      gateway: FakePaymentGateway(activities: const []),
+    );
+
+    expect(find.text('No transactions yet'), findsOneWidget);
+    expect(find.text('Payments you make will appear here.'), findsOneWidget);
+    final export = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.download_rounded),
+    );
+    expect(export.onPressed, isNull);
   });
 
   testWidgets('a load error shows retry instead of mock data', (tester) async {

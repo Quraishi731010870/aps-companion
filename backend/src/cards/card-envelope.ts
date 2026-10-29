@@ -66,10 +66,22 @@ export function sealEnvelope(publicKey: KeyObject, kid: string, card: CardPlaint
   return { v: ENVELOPE_VERSION, kid, ek: ek.toString('base64url'), iv: iv.toString('base64url'), ct: ct.toString('base64url') };
 }
 
+/**
+ * Sensitive authentication data (PCI DSS 3.3): never accepted in a card
+ * envelope, so it cannot reach the vault, a transaction or a log.
+ */
+const FORBIDDEN_CARD_FIELDS = ['cvv', 'cvv2', 'cvc', 'cvc2', 'cid', 'securityCode', 'pin', 'pinBlock', 'track1', 'track2'];
+
+/** True when the card's expiry month has fully passed. */
+export function isExpired(expMonth: number, expYear: number, now = new Date()): boolean {
+  return expYear < now.getUTCFullYear() || (expYear === now.getUTCFullYear() && expMonth < now.getUTCMonth() + 1);
+}
+
 function parseCard(plaintext: Buffer): CardPlaintext {
   let value: unknown;
   try { value = JSON.parse(plaintext.toString('utf8')); } catch { throw new EnvelopeError('INVALID_CARD'); }
   if (typeof value !== 'object' || value === null) throw new EnvelopeError('INVALID_CARD');
+  if (FORBIDDEN_CARD_FIELDS.some((field) => Object.keys(value).some((key) => key.toLowerCase() === field.toLowerCase()))) throw new EnvelopeError('INVALID_CARD');
   const { pan, expMonth, expYear, holder, ts } = value as Record<string, unknown>;
   if (typeof pan !== 'string' || !/^\d{12,19}$/.test(pan) || typeof ts !== 'number') throw new EnvelopeError('INVALID_CARD');
   if (expMonth !== undefined && (typeof expMonth !== 'number' || expMonth < 1 || expMonth > 12)) throw new EnvelopeError('INVALID_CARD');

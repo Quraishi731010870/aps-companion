@@ -2,11 +2,22 @@ import 'dart:async';
 
 import '../domain/payment_gateway.dart';
 import '../domain/payment_transaction.dart';
+import '../domain/wallet.dart';
 
-/// Development gateway only. Replace with a regulated, authenticated EMI API.
+/// Offline development gateway: no sample data, an empty wallet, and
+/// payments that succeed without moving money or calling the network.
 class MockPaymentGateway implements PaymentGateway {
+  static const offlineWallet = Wallet(
+    id: 'WALLET-OFFLINE',
+    currency: 'AFN',
+    availableBalance: 0,
+  );
+
   @override
-  Future<List<WalletActivity>> fetchActivities() async => mockActivities;
+  Future<List<WalletActivity>> fetchActivities() async => const [];
+
+  @override
+  Future<Wallet> fetchWallet() async => offlineWallet;
 
   @override
   Future<PaymentResult> execute(PaymentRequest request) async {
@@ -30,64 +41,3 @@ class MockPaymentGateway implements PaymentGateway {
     _ => '${operation.label} completed successfully',
   };
 }
-
-final mockActivities = <WalletActivity>[
-  WalletActivity(
-    title: 'Salary payment',
-    subtitle: 'Kabul Trading Co.',
-    amount: 18500,
-    incoming: true,
-    operation: PaymentOperation.cardToWallet,
-    date: DateTime.now().subtract(const Duration(hours: 2)),
-    source: 'Kabul Trading Co. payroll',
-    destination: 'WALLET-7814',
-    rrn: '426981730112',
-  ),
-  WalletActivity(
-    title: 'Mobile top-up',
-    subtitle: 'Roshan • 079 123 4567',
-    amount: 500,
-    incoming: false,
-    operation: PaymentOperation.purchase,
-    date: DateTime.now().subtract(const Duration(days: 1)),
-    source: 'APS card •••• 1087',
-    destination: 'Roshan 0791234567',
-    rrn: '426872119408',
-    fee: 5,
-  ),
-  WalletActivity(
-    title: 'Bank transfer',
-    subtitle: 'Azizi Bank • •••• 1942',
-    amount: 2200,
-    incoming: false,
-    operation: PaymentOperation.walletToCard,
-    date: DateTime.now().subtract(const Duration(days: 2)),
-    source: 'WALLET-7814',
-    destination: 'Azizi Bank •••• 1942',
-    rrn: 'UTR-AF-785-903184',
-    fee: 10,
-  ),
-  WalletActivity(
-    title: 'Electricity bill',
-    subtitle: 'DABS • Kabul',
-    amount: 1375,
-    incoming: false,
-    operation: PaymentOperation.purchase,
-    date: DateTime.now().subtract(const Duration(days: 4)),
-    source: 'APS card •••• 1087',
-    destination: 'DABS Kabul 994712',
-    rrn: '426553881209',
-    fee: 15,
-  ),
-  WalletActivity(
-    title: 'Cash deposit',
-    subtitle: 'Shahr-e-Naw agent',
-    amount: 5000,
-    incoming: true,
-    operation: PaymentOperation.cashIn,
-    date: DateTime.now().subtract(const Duration(days: 7)),
-    source: 'Shahr-e-Naw agent AGT-019',
-    destination: 'WALLET-7814',
-    rrn: '426093725841',
-  ),
-];

@@ -15,6 +15,10 @@ const _dari = <String, String>{
   'Profile': 'پروفایل',
   'Good afternoon': 'بعد از ظهر بخیر',
   'Available balance': 'موجودی قابل دسترس',
+  'Balance unavailable': 'موجودی در دسترس نیست',
+  'Wallet unavailable': 'کیف پول در دسترس نیست',
+  'Loading wallet…': 'در حال بارگذاری کیف پول…',
+  'Your wallet could not be loaded.': 'کیف پول شما بارگذاری نشد.',
   'Cash in': 'واریز نقدی',
   'Bank push': 'انتقال به بانک',
   'Purchase': 'خرید',
@@ -33,7 +37,7 @@ const _dari = <String, String>{
   'Your linked card': 'کارت وصل‌شده شما',
   'Replace card': 'تعویض کارت',
   'Cardholder': 'دارنده کارت',
-  'Expiry': 'تاریخ انقضا',
+  'This card has expired': 'تاریخ این کارت گذشته است',
   'Connect an APS-enabled card to use bank pull and card payments.':
       'برای پرداخت، یک کارت فعال APS را وصل کنید.',
   'Connect an APS-enabled bank card to your wallet':
@@ -44,6 +48,9 @@ const _dari = <String, String>{
   'Raise your monthly limit to 250,000 AFN':
       'سقف ماهانه را به ۲۵۰٬۰۰۰ افغانی افزایش دهید',
   'Recent activity': 'فعالیت‌های اخیر',
+  'No transactions yet': 'هنوز تراکنشی ندارید',
+  'Payments you make will appear here.':
+      'پرداخت‌های شما اینجا نمایش داده می‌شوند.',
   'EMI services': 'خدمات پول الکترونیکی',
   'All supported financial transaction rails': 'همه خدمات مالی پشتیبانی‌شده',
   'Search name or transaction code': 'جستجوی نام یا کُد تراکنش',
@@ -124,9 +131,6 @@ const _dari = <String, String>{
   'Bill information': 'معلومات بل',
   'Biller': 'شرکت خدماتی',
   'Customer / bill number': 'شماره مشتری / بل',
-  'Due amount': 'مبلغ قابل پرداخت',
-  'Due date': 'تاریخ پرداخت',
-  'Customer': 'مشتری',
   'Merchant QR code scanned.': 'کود QR فروشنده اسکن شد.',
   'View receipt': 'مشاهده رسید',
   'Done': 'تمام',

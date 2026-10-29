@@ -36,6 +36,28 @@ void main() {
     }
   });
 
+  test('clearSession keeps the device key', () async {
+    mockSecureStorage(
+      values: {
+        SecureKey.accessToken: 'a',
+        SecureKey.userProfile: '{}',
+        SecureKey.linkedCard: '{}',
+        SecureKey.deviceKey: 'device',
+      },
+    );
+    final store = SecureStore();
+
+    await store.clearSession();
+
+    for (final key in SecureKey.values) {
+      expect(
+        await store.read(key),
+        key.sessionScoped ? isNull : isNotNull,
+        reason: key.name,
+      );
+    }
+  });
+
   test(
     'a fresh install wipes Keychain values left by a previous install',
     () async {

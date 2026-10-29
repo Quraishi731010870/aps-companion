@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:afghan_emi/src/core/network/api_client.dart';
+import 'package:afghan_emi/src/core/security/request_signature.dart';
+import 'package:afghan_emi/src/core/security/request_signer.dart';
 import 'package:afghan_emi/src/core/storage/secure_store.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +15,32 @@ const _base = 'http://api.test';
 
 http.Response _json(Object body, [int status = 200]) =>
     http.Response(jsonEncode(body), status);
+
+/// Records what it signs; the signature header carries a call counter.
+class _RecordingSigner implements RequestSigner {
+  final signed = <({String method, String path, String body})>[];
+
+  @override
+  Future<DeviceBinding> binding() async => const DeviceBinding(
+    installationId: 'install-0123456789abcdef',
+    platform: 'ANDROID',
+    publicKey: 'key',
+  );
+
+  @override
+  Future<Map<String, String>> sign({
+    required String method,
+    required Uri uri,
+    required List<int> body,
+  }) async {
+    signed.add((
+      method: method,
+      path: RequestSignature.pathOf(uri),
+      body: utf8.decode(body),
+    ));
+    return {RequestSignature.signatureHeader: 'sig-${signed.length}'};
+  }
+}
 
 void main() {
   const storage = FlutterSecureStorage();
@@ -58,6 +86,68 @@ void main() {
     await api.getJson('/public', authenticated: false);
 
     expect(sent.headers.containsKey('Authorization'), isFalse);
+  });
+
+  test('signs the exact method, path and body bytes that are sent', () async {
+    final signer = _RecordingSigner();
+    final sent = <http.Request>[];
+    final api = ApiClient(
+      baseUrl: _base,
+      signer: signer,
+      client: MockClient((request) async {
+        sent.add(request);
+        return _json({});
+      }),
+    );
+
+    await api.postJson('/api/v1/transactions', {'amount': 10});
+    await api.getJson('/api/v1/cards?page=1');
+
+    expect(signer.signed, [
+      (method: 'POST', path: '/api/v1/transactions', body: '{"amount":10}'),
+      (method: 'GET', path: '/api/v1/cards?page=1', body: ''),
+    ]);
+    expect(sent[0].body, '{"amount":10}');
+    expect(sent[0].headers[RequestSignature.signatureHeader], 'sig-1');
+    expect(sent[1].headers[RequestSignature.signatureHeader], 'sig-2');
+  });
+
+  test('the refresh call and the retry are signed again', () async {
+    final signer = _RecordingSigner();
+    final signatures = <String?>[];
+    final api = ApiClient(
+      baseUrl: _base,
+      signer: signer,
+      client: MockClient((request) async {
+        signatures.add(request.headers[RequestSignature.signatureHeader]);
+        if (request.url.path == '/api/v1/auth/refresh') {
+          return _json({'accessToken': 'new-access', 'refreshToken': 'new-r'});
+        }
+        return signatures.length == 1 ? http.Response('', 401) : _json({});
+      }),
+    );
+
+    await api.getJson('/api/v1/me');
+
+    expect(signatures, ['sig-1', 'sig-2', 'sig-3']);
+    expect(signer.signed.map((s) => s.path), [
+      '/api/v1/me',
+      '/api/v1/auth/refresh',
+      '/api/v1/me',
+    ]);
+  });
+
+  test('ending the session keeps the device key', () async {
+    await storage.write(key: SecureKey.deviceKey.storageKey, value: 'device');
+    final api = ApiClient(
+      baseUrl: _base,
+      client: MockClient((_) async => _json({})),
+    );
+
+    await api.clearSession();
+
+    expect(await api.hasAccessToken(), isFalse);
+    expect(await storage.read(key: SecureKey.deviceKey.storageKey), 'device');
   });
 
   test('server errors become a generic ApiException', () async {

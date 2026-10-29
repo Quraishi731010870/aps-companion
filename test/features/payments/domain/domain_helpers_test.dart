@@ -1,9 +1,10 @@
 import 'package:afghan_emi/src/features/activity/domain/activity_csv.dart';
-import 'package:afghan_emi/src/features/payments/data/mock_payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/domain/card_number.dart';
 import 'package:afghan_emi/src/features/payments/domain/idempotency_key.dart';
 import 'package:afghan_emi/src/features/settings/domain/app_settings.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/test_app.dart';
 
 void main() {
   group('IdempotencyKey', () {
@@ -60,7 +61,7 @@ void main() {
 
   group('ActivityCsv', () {
     test('writes a header plus one quoted row per activity', () {
-      final lines = ActivityCsv.encode(mockActivities.take(2)).split('\n');
+      final lines = ActivityCsv.encode(testActivities.take(2)).split('\n');
 
       expect(lines.first, ActivityCsv.header);
       expect(lines, hasLength(3));

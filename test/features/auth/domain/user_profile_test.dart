@@ -27,6 +27,6 @@ void main() {
     expect(user.initials, 'DC');
     expect(const UserProfile(id: '1', displayName: 'asif').initials, 'A');
     expect(const UserProfile(id: '1', displayName: '  ').initials, '?');
-    expect(UserProfile.demo.initials, 'AQ');
+    expect(UserProfile.demo.initials, 'OU');
   });
 }

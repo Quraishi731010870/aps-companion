@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/formatting/currency_format.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/widgets/async_views.dart';
 import '../../../activity/presentation/view_models/activities.dart';
@@ -9,6 +10,7 @@ import '../../../auth/presentation/view_models/current_user.dart';
 import '../../../payments/presentation/view_models/enabled_operations.dart';
 import '../../../payments/domain/payment_transaction.dart';
 import '../../../payments/presentation/view_models/linked_card.dart';
+import '../../../payments/presentation/view_models/wallet.dart';
 import '../../../payments/presentation/views/card_link_sheet.dart';
 import '../../../payments/presentation/views/payment_flow.dart';
 import '../../../payments/presentation/views/saved_card_sheet.dart';
@@ -143,18 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ],
                 ),
-                Text(
-                  hidden ? '•••••• AFN' : '24,560 AFN',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const Text(
-                  'Wallet ID  •••• 7814',
-                  style: TextStyle(color: Colors.white70),
-                ),
+                _WalletSummary(hidden: hidden),
                 const SizedBox(height: 22),
                 Row(
                   children: [
@@ -218,56 +209,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 23),
           const _Header('Transaction services'),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: operations.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              childAspectRatio: .78,
-              crossAxisSpacing: 7,
-            ),
-            itemBuilder: (context, index) {
-              final operation = operations[index];
-              return InkWell(
-                onTap: () => openPaymentFlow(context, operation),
-                borderRadius: BorderRadius.circular(17),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xffe7f3ef),
-                        borderRadius: BorderRadius.circular(17),
-                      ),
-                      child: Icon(
-                        operation.icon,
-                        color: const Color(0xff087f67),
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      context.tr(operation.label.split(' (').first),
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      '${operation.code}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.black45,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          _ServiceGrid(operations),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(16),
@@ -329,6 +271,122 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// Balance and masked wallet id from the backend.
+class _WalletSummary extends ConsumerWidget {
+  const _WalletSummary({required this.hidden});
+  final bool hidden;
+
+  static const _balanceStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 30,
+    fontWeight: FontWeight.w900,
+  );
+  static const _detailStyle = TextStyle(color: Colors.white70);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => switch (ref.watch(
+    walletProvider,
+  )) {
+    AsyncData(:final value) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          hidden
+              ? '•••••• ${value.currency}'
+              : groupedAmount(value.availableBalance, value.currency),
+          style: _balanceStyle,
+        ),
+        Text('Wallet ID  ${value.masked}', style: _detailStyle),
+      ],
+    ),
+    AsyncError() => Row(
+      children: [
+        Expanded(
+          child: Text(context.tr('Balance unavailable'), style: _detailStyle),
+        ),
+        IconButton(
+          tooltip: context.tr('Try again'),
+          onPressed: () => ref.invalidate(walletProvider),
+          icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+        ),
+      ],
+    ),
+    _ => const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
+      child: SizedBox.square(
+        dimension: 24,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+      ),
+    ),
+  };
+}
+
+/// Service tiles sized by content, not screen width: about 104px per column
+/// (4 on phones, more on tablets) and a fixed height that follows text scale.
+class _ServiceGrid extends StatelessWidget {
+  const _ServiceGrid(this.operations);
+  final List<PaymentOperation> operations;
+
+  static const _labelStyle = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+  );
+  static const _codeStyle = TextStyle(fontSize: 10, color: Colors.black45);
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    // Icon, gap, two label lines, the code line and a little breathing room.
+    final tileHeight =
+        52 + 7 + scaler.scale(11) * 1.3 * 2 + scaler.scale(10) * 1.3 + 10;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: operations.length,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 104,
+        mainAxisExtent: tileHeight,
+        crossAxisSpacing: 7,
+        mainAxisSpacing: 6,
+      ),
+      itemBuilder: (context, index) => _ServiceTile(operations[index]),
+    );
+  }
+}
+
+class _ServiceTile extends StatelessWidget {
+  const _ServiceTile(this.operation);
+  final PaymentOperation operation;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => openPaymentFlow(context, operation),
+    borderRadius: BorderRadius.circular(17),
+    child: Column(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: const Color(0xffe7f3ef),
+            borderRadius: BorderRadius.circular(17),
+          ),
+          child: Icon(operation.icon, color: const Color(0xff087f67)),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          context.tr(operation.label.split(' (').first),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: _ServiceGrid._labelStyle,
+        ),
+        Text('${operation.code}', style: _ServiceGrid._codeStyle),
+      ],
+    ),
+  );
+}
+
 class _Action extends StatelessWidget {
   const _Action(this.label, this.icon, this.onTap);
   final String label;
@@ -386,6 +444,11 @@ class _RecentActivity extends ConsumerWidget {
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: switch (ref.watch(activitiesProvider)) {
+        AsyncData(:final value) when value.isEmpty => const EmptyView(
+          icon: Icons.receipt_long_outlined,
+          message: 'No transactions yet',
+          detail: 'Payments you make will appear here.',
+        ),
         AsyncData(:final value) => Column(
           children: [
             for (final item in value.take(4)) ActivityTile(item: item),

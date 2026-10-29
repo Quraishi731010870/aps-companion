@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, NotFoundException, Param, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, NotFoundException, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
@@ -7,19 +7,20 @@ import type { AuthenticatedRequest } from '../auth/auth.types';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 import { CardCryptoService } from './card-crypto.service';
-import { maskPan } from './card-envelope';
+import { isExpired, maskPan } from './card-envelope';
 import { CardEnvelopeDto } from './card-envelope.dto';
 
 class SaveCardDto {
   @ValidateNested() @Type(() => CardEnvelopeDto) encryptedCard!: CardEnvelopeDto;
 }
 
-interface SavedCardView { token: string; maskedPan: string; expiryMonth: number | null; expiryYear: number | null; holderName: string | null }
+interface SavedCardView { token: string; maskedPan: string; holderName: string | null }
 
 /**
  * Card vault for mobile customers. Cards arrive encrypted (see card-envelope.ts),
  * are stored encrypted at rest, and only a random token plus the masked PAN is
- * ever returned.
+ * ever returned. Only the card number is kept: the expiry is checked at linking
+ * and discarded, and a CVV is never accepted.
  */
 @ApiTags('cards') @ApiBearerAuth() @Controller({ path: 'cards', version: '1' })
 export class CardsController {
@@ -34,13 +35,14 @@ export class CardsController {
   @Post() async save(@Body() dto: SaveCardDto, @Req() request: AuthenticatedRequest): Promise<SavedCardView> {
     const customerId = await this.customerId(request);
     const card = this.crypto.open(dto.encryptedCard);
+    if (card.expMonth !== undefined && card.expYear !== undefined && isExpired(card.expMonth, card.expYear)) {
+      throw new BadRequestException({ code: 'CARD_EXPIRED', message: 'This card has expired.' });
+    }
     const vault = this.crypto.vaultCipher();
     const fingerprint = vault.fingerprint(card.pan);
     const data = {
       panCiphertext: vault.encrypt(card.pan, customerId),
       maskedPan: maskPan(card.pan),
-      expiryMonth: card.expMonth ?? null,
-      expiryYear: card.expYear ?? null,
       holderName: card.holder?.trim() || null,
       keyId: this.crypto.publicKey().kid,
     };
@@ -80,5 +82,5 @@ export class CardsController {
 }
 
 function view(card: SavedCardView): SavedCardView {
-  return { token: card.token, maskedPan: card.maskedPan, expiryMonth: card.expiryMonth, expiryYear: card.expiryYear, holderName: card.holderName };
+  return { token: card.token, maskedPan: card.maskedPan, holderName: card.holderName };
 }

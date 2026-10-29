@@ -33,6 +33,37 @@ void main() {
     expect(containerOf(tester).read(linkedCardProvider).value, isNull);
   });
 
+  testWidgets('an expired card is refused before anything is sent', (
+    tester,
+  ) async {
+    await _openSheet(tester);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Card number'),
+      '6037991234561234',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Expiry MM/YY'),
+      '01/20',
+    );
+    await tester.tap(_linkButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('This card has expired'), findsOneWidget);
+    expect(containerOf(tester).read(linkedCardProvider).value, isNull);
+  });
+
+  testWidgets('the form never asks for a CVV', (tester) async {
+    await _openSheet(tester);
+
+    expect(
+      find.textContaining(
+        RegExp('CVV|CVC|security code', caseSensitive: false),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('a valid card is linked, masked and shown on Home', (
     tester,
   ) async {

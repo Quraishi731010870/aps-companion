@@ -1,11 +1,11 @@
-import 'package:afghan_emi/src/features/profile/domain/wallet_identity.dart';
+import 'package:afghan_emi/src/features/profile/domain/wallet_qr_payload.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('wallet receive QR round-trips only the wallet identifier', () {
-    final payload = WalletQrPayload.forWallet(WalletIdentity.number).toString();
+    final payload = WalletQrPayload.forWallet('WALLET-AF000001').toString();
 
-    expect(WalletQrPayload.walletFrom(payload), WalletIdentity.number);
+    expect(WalletQrPayload.walletFrom(payload), 'WALLET-AF000001');
     expect(payload, isNot(contains('Asif')));
     expect(payload, isNot(contains('+93')));
   });

@@ -147,8 +147,6 @@ model SavedCard {
   panCiphertext  Bytes     @map("pan_ciphertext")
   panFingerprint String    @map("pan_fingerprint") @db.Char(64)
   maskedPan      String    @map("masked_pan") @db.VarChar(19)
-  expiryMonth    Int?      @map("expiry_month") @db.SmallInt
-  expiryYear     Int?      @map("expiry_year") @db.SmallInt
   holderName     String?   @map("holder_name") @db.VarChar(120)
   keyId          String    @map("key_id") @db.VarChar(64)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -232,9 +230,13 @@ model Session {
 model Device {
   id          String        @id @default(uuid()) @db.Uuid
   userId      String        @map("user_id") @db.Uuid
-  installationId String     @unique @map("installation_id") @db.VarChar(128)
+  installationId String     @map("installation_id") @db.VarChar(128)
   platform    Platform
   name        String?       @db.VarChar(160)
+  /// Raw Ed25519 public key (base64url) registered at login; verifies every signed request.
+  publicKey   String?       @map("public_key") @db.VarChar(64)
+  keyAlgorithm String?      @map("key_algorithm") @db.VarChar(16)
+  boundAt     DateTime?     @map("bound_at") @db.Timestamptz(6)
   pushToken   String?       @unique @map("push_token")
   status      AccountStatus @default(ACTIVE)
   lastSeenAt  DateTime?     @map("last_seen_at") @db.Timestamptz(6)
@@ -243,7 +245,9 @@ model Device {
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessions    Session[]
   deliveries NotificationDelivery[]
+  transactions Transaction[]
 
+  @@unique([userId, installationId])
   @@index([userId, status])
   @@map("devices")
 }
@@ -303,6 +307,9 @@ model Transaction {
   responseCode         String?              @map("response_code") @db.VarChar(16)
   responseDescription  String?              @map("response_description") @db.VarChar(256)
   processingTimeMs     Int?                 @map("processing_time_ms")
+  /// Device that signed the request, and its signature (non-repudiation, APS p.49).
+  deviceId             String?              @map("device_id") @db.Uuid
+  deviceSignature      String?              @map("device_signature") @db.VarChar(128)
   createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
   completedAt          DateTime?            @map("completed_at") @db.Timestamptz(6)
@@ -312,11 +319,13 @@ model Transaction {
   destinationAccount   Account?             @relation("DestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
   parent               Transaction?         @relation("TransactionChildren", fields: [parentTransactionId], references: [id], onDelete: Restrict)
   children             Transaction[]        @relation("TransactionChildren")
+  device               Device?              @relation(fields: [deviceId], references: [id], onDelete: Restrict)
   events               TransactionEvent[]
 
   @@index([status, createdAt])
   @@index([customerId, createdAt])
   @@index([transactionTypeId, createdAt])
+  @@index([deviceId])
   @@map("transactions")
 }
 

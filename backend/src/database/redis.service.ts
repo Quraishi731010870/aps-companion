@@ -12,9 +12,12 @@ export class RedisService implements OnModuleDestroy {
       maxRetriesPerRequest: 1,
     });
   }
-  async ping(): Promise<string> {
-    if (this.client.status === 'wait') await this.client.connect();
-    return this.client.ping();
+  private connecting?: Promise<void>;
+  /** The connected client; concurrent callers share one connect. */
+  async ready(): Promise<Redis> {
+    if (this.client.status === 'wait') await (this.connecting ??= this.client.connect().finally(() => { this.connecting = undefined; }));
+    return this.client;
   }
+  async ping(): Promise<string> { return (await this.ready()).ping(); }
   async onModuleDestroy(): Promise<void> { if (this.client.status !== 'end') await this.client.quit(); }
 }

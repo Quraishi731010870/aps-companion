@@ -102,9 +102,17 @@ class _CardLinkSheetState extends ConsumerState<_CardLinkSheet> {
                   ],
                   decoration: const InputDecoration(labelText: 'Expiry MM/YY'),
                   validator: (value) =>
-                      RegExp(r'^(0[1-9]|1[0-2])/\d{2}$').hasMatch(value ?? '')
-                      ? null
-                      : 'Use MM/YY',
+                      switch (CardDetails.parseExpiry(value ?? '')) {
+                        null => 'Use MM/YY',
+                        (final month, final year)
+                            when CardDetails.isExpired(
+                              month,
+                              year,
+                              DateTime.now(),
+                            ) =>
+                          context.tr('This card has expired'),
+                        _ => null,
+                      },
                 ),
               ),
               const SizedBox(width: 12),

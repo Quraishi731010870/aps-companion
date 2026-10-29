@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/security/device_key_signer.dart';
+import '../../../core/security/request_signer.dart';
 import '../../../core/storage/secure_store.dart';
 import '../domain/user_profile.dart';
 
@@ -18,10 +20,12 @@ class SignInRejected implements Exception {
 
 /// Mobile sign-in against `/api/v1/auth`. Tokens and the user profile are
 /// written only to [SecureStore]; nothing is cached in plain storage.
+/// Login also binds this device's signing key to the customer.
 class AuthRepository {
-  AuthRepository(this._api, this._store);
+  AuthRepository(this._api, this._store, this._signer);
   final ApiClient _api;
   final SecureStore _store;
+  final RequestSigner _signer;
 
   Future<UserProfile> signIn({
     required String identifier,
@@ -29,7 +33,11 @@ class AuthRepository {
   }) async {
     final json = await _api.postJson(
       '/api/v1/auth/login',
-      {'identifier': identifier, 'password': password},
+      {
+        'identifier': identifier,
+        'password': password,
+        'device': (await _signer.binding()).toJson(),
+      },
       authenticated: false,
       retryAuthentication: false,
     );
@@ -69,7 +77,7 @@ class AuthRepository {
     }
   }
 
-  /// Removes tokens and the profile from the device.
+  /// Removes tokens and the profile; the device key stays.
   Future<void> signOut() => _api.clearSession();
 }
 
@@ -77,4 +85,5 @@ class AuthRepository {
 AuthRepository authRepository(Ref ref) => AuthRepository(
   ref.watch(apiClientProvider),
   ref.watch(secureStoreProvider),
+  ref.watch(requestSignerProvider),
 );
