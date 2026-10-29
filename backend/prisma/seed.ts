@@ -3,7 +3,7 @@ import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 const permissions = [
-  'dashboard.view', 'users.view', 'users.create', 'users.update', 'users.disable', 'customers.view',
+  'dashboard.view', 'users.view', 'users.create', 'users.update', 'users.disable', 'customers.view', 'customers.manage',
   'transactions.view', 'transactions.search', 'transactions.export', 'transactions.reverse',
   'notifications.view', 'notifications.create', 'notifications.send', 'configuration.view',
   'configuration.update', 'monitoring.view', 'monitoring.manage', 'reports.view', 'reports.export', 'audit.view',

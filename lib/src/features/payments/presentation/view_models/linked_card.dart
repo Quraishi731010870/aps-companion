@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../auth/presentation/view_models/session.dart';
 import '../../data/card_vault_provider.dart';
 import '../../domain/card_details.dart';
 import '../../domain/saved_card.dart';
@@ -11,7 +12,11 @@ part 'linked_card.g.dart';
 @Riverpod(keepAlive: true)
 class LinkedCard extends _$LinkedCard {
   @override
-  Future<SavedCard?> build() => ref.watch(cardVaultProvider).linkedCard();
+  Future<SavedCard?> build() async {
+    // Reload when the user changes; sign-out clears the stored card.
+    await ref.watch(sessionProvider.future);
+    return ref.watch(cardVaultProvider).linkedCard();
+  }
 
   /// Encrypts [card], vaults it on the backend and links the returned token.
   Future<SavedCard> link(CardDetails card) async {

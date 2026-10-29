@@ -37,7 +37,12 @@ class ApiClient {
   final http.Client _client;
   final SecureStore _store;
   final RequestSigner? _signer;
+  final _sessionEnded = StreamController<void>.broadcast();
   Future<bool>? _refreshInFlight;
+
+  /// Fires when the server rejects the refresh token and the local session is
+  /// cleared, so the app can return to sign-in.
+  Stream<void> get sessionEnded => _sessionEnded.stream;
 
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -136,6 +141,7 @@ class ApiClient {
           .timeout(const Duration(seconds: 15));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         await clearSession();
+        _sessionEnded.add(null);
         return false;
       }
       final json = jsonDecode(response.body);
@@ -183,6 +189,7 @@ class ApiClient {
       throw ApiException(
         response.statusCode,
         'The AfghanPay service could not process this request.',
+        code: _errorCode(response.body),
       );
     }
     final value = jsonDecode(response.body);
@@ -192,13 +199,30 @@ class ApiClient {
     return value;
   }
 
-  void dispose() => _client.close();
+  /// The backend's machine-readable code (e.g. `PHONE_IN_USE`). Only an
+  /// upper-case constant is kept; the server's message is never surfaced.
+  static String? _errorCode(String body) {
+    try {
+      final code = (jsonDecode(body) as Map)['code'];
+      return code is String && RegExp(r'^[A-Z][A-Z0-9_]{0,63}$').hasMatch(code)
+          ? code
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void dispose() {
+    _client.close();
+    _sessionEnded.close();
+  }
 }
 
 class ApiException implements Exception {
-  const ApiException(this.statusCode, this.message);
+  const ApiException(this.statusCode, this.message, {this.code});
   final int statusCode;
   final String message;
+  final String? code;
   @override
   String toString() => message;
 }

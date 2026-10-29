@@ -8,14 +8,18 @@ part of 'config_sync_service.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Live socket that reloads [mobileConfigProvider] when the admin portal
-/// publishes a change. The socket is closed when the provider is disposed.
+/// Live socket to the backend's `/realtime` namespace. It only announces that
+/// the admin portal published a change; `mobileConfigProvider` listens to
+/// [changes] and reloads itself. (Invalidating that provider from here would
+/// be a circular dependency, because it watches this one.)
 
 @ProviderFor(configSyncService)
 final configSyncServiceProvider = ConfigSyncServiceProvider._();
 
-/// Live socket that reloads [mobileConfigProvider] when the admin portal
-/// publishes a change. The socket is closed when the provider is disposed.
+/// Live socket to the backend's `/realtime` namespace. It only announces that
+/// the admin portal published a change; `mobileConfigProvider` listens to
+/// [changes] and reloads itself. (Invalidating that provider from here would
+/// be a circular dependency, because it watches this one.)
 
 final class ConfigSyncServiceProvider
     extends
@@ -25,8 +29,10 @@ final class ConfigSyncServiceProvider
           ConfigSyncService
         >
     with $Provider<ConfigSyncService> {
-  /// Live socket that reloads [mobileConfigProvider] when the admin portal
-  /// publishes a change. The socket is closed when the provider is disposed.
+  /// Live socket to the backend's `/realtime` namespace. It only announces that
+  /// the admin portal published a change; `mobileConfigProvider` listens to
+  /// [changes] and reloads itself. (Invalidating that provider from here would
+  /// be a circular dependency, because it watches this one.)
   ConfigSyncServiceProvider._()
     : super(
         from: null,
@@ -61,4 +67,4 @@ final class ConfigSyncServiceProvider
   }
 }
 
-String _$configSyncServiceHash() => r'b175fd0248b6d2906f0c98696d4a60bbabbfdd58';
+String _$configSyncServiceHash() => r'f20dc6ba510e8ca0d2d075d41ad1fbc95c3712f6';

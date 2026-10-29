@@ -17,6 +17,7 @@ enum AccountStatus {
   ACTIVE
   LOCKED
   DISABLED
+  BLOCKED
   CLOSED
 }
 
@@ -149,6 +150,8 @@ model SavedCard {
   maskedPan      String    @map("masked_pan") @db.VarChar(19)
   holderName     String?   @map("holder_name") @db.VarChar(120)
   keyId          String    @map("key_id") @db.VarChar(64)
+  /// Operator control (ACTIVE / DISABLED / BLOCKED); revokedAt is the customer's own removal.
+  status         AccountStatus @default(ACTIVE)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
   customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)

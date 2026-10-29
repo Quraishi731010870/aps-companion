@@ -1,7 +1,7 @@
 import { environment, isTrustedAdminApiUrl } from '../config/environment'
 
 export type AdminPermission =
-  | 'dashboard.view' | 'customers.view' | 'users.view' | 'users.create' | 'users.update' | 'users.disable'
+  | 'dashboard.view' | 'customers.view' | 'customers.manage' | 'users.view' | 'users.create' | 'users.update' | 'users.disable'
   | 'transactions.view' | 'transactions.search' | 'transactions.export' | 'transactions.reverse' | 'reports.view' | 'reports.export'
   | 'notifications.view' | 'notifications.create' | 'notifications.send' | 'monitoring.view' | 'monitoring.manage'
   | 'configuration.view' | 'configuration.update' | 'audit.view'
@@ -78,17 +78,32 @@ export interface Transaction {
 
 export interface Customer {
   id: string
+  customerNo?: string
   name: string
   phoneMasked?: string
   status: string
   createdAt?: string
   lastActivityAt?: string
 }
+/** Operator actions; the backend decides which apply (`actions`) from the current status. */
+export type StatusAction = 'activate' | 'deactivate' | 'block' | 'unblock'
+export interface Controlled { status: string; actions?: StatusAction[] }
+export interface CustomerAccount extends Controlled { id: string; type: string; maskedNumber?: string; currency?: string; availableBalance?: number }
+export interface CustomerCard extends Controlled { id: string; maskedPan: string; createdAt?: string }
+export interface CustomerDevice extends Controlled { id: string; platform: string; name?: string | null; boundAt?: string | null; lastSeenAt?: string | null }
 export interface CustomerDetails extends Customer {
   emailMasked?: string
-  accounts?: Array<{ id: string; type: string; maskedNumber?: string; currency?: string; status: string }>
+  kycStatus?: string
+  actions?: StatusAction[]
+  accounts?: CustomerAccount[]
+  cards?: CustomerCard[]
+  devices?: CustomerDevice[]
   activity?: Array<{ id: string; event: string; at: string }>
 }
+/** What a status action applies to: the customer itself, or one of their accounts, cards or devices. */
+export type StatusTarget =
+  | { kind: 'customer'; customerId: string }
+  | { kind: 'account' | 'card' | 'device'; customerId: string; id: string }
 export interface CustomerFilters {
   page: number; pageSize: number; search?: string; status?: string; sort?: string
   dateFrom?: string; dateTo?: string; lastActivityFrom?: string; lastActivityTo?: string
@@ -135,7 +150,7 @@ export interface AlertFilters {
 }
 
 export class AdminApiError extends Error {
-  constructor(readonly code: 'integration_required' | 'unauthorized' | 'forbidden' | 'network' | 'server' | 'validation', message: string) {
+  constructor(readonly code: 'integration_required' | 'unauthorized' | 'forbidden' | 'network' | 'server' | 'validation' | 'conflict', message: string) {
     super(message)
     this.name = 'AdminApiError'
   }
@@ -151,6 +166,7 @@ export interface AdminApi {
   getTransaction(id: string): Promise<Transaction>
   listCustomers(filters: CustomerFilters): Promise<Page<Customer>>
   getCustomer(id: string): Promise<CustomerDetails>
+  updateStatus(target: StatusTarget, action: StatusAction, reason: string): Promise<{ id: string; status: string }>
   getMonitoringOverview(): Promise<MonitoringOverview>
   getTransactionMonitoring(filters: Pick<TransactionFilters, 'dateFrom' | 'dateTo' | 'operation' | 'status' | 'channel' | 'source' | 'destination'>): Promise<TransactionMonitoring>
   listAlerts(filters: AlertFilters): Promise<Page<AlertRecord>>
@@ -180,6 +196,7 @@ class BackendRequiredApi implements AdminApi {
   async getTransaction(): Promise<Transaction> { return this.unavailable() }
   async listCustomers(): Promise<Page<Customer>> { return this.unavailable() }
   async getCustomer(): Promise<CustomerDetails> { return this.unavailable() }
+  async updateStatus(): Promise<{ id: string; status: string }> { return this.unavailable() }
   async getMonitoringOverview(): Promise<MonitoringOverview> { return this.unavailable() }
   async getTransactionMonitoring(): Promise<TransactionMonitoring> { return this.unavailable() }
   async listAlerts(): Promise<Page<AlertRecord>> { return this.unavailable() }
@@ -207,7 +224,9 @@ export class FetchAdminApi implements AdminApi {
   readonly configured: boolean
   private readonly base: string
   private csrfToken: string | null = null
-  constructor(baseUrl: string, private readonly fetcher: typeof fetch = fetch) {
+  // Wrapped so native fetch is never invoked with this object as `this`
+  // (browsers throw "Illegal invocation").
+  constructor(baseUrl: string, private readonly fetcher: typeof fetch = (input, init) => fetch(input, init)) {
     this.configured = isTrustedAdminApiUrl(baseUrl)
     this.base = baseUrl.replace(/\/$/, '')
   }
@@ -223,6 +242,11 @@ export class FetchAdminApi implements AdminApi {
   getTransaction(id: string) { return this.request<Transaction>(`/api/v1/transactions/${encodeURIComponent(id)}`) }
   listCustomers(filters: CustomerFilters) { return this.request<Page<Customer>>(`/api/v1/customers?${this.params(filters)}`) }
   getCustomer(id: string) { return this.request<CustomerDetails>(`/api/v1/customers/${encodeURIComponent(id)}`) }
+  async updateStatus(target: StatusTarget, action: StatusAction, reason: string) {
+    const customer = `/api/v1/customers/${encodeURIComponent(target.customerId)}`
+    const path = target.kind === 'customer' ? `${customer}/status` : `${customer}/${target.kind}s/${encodeURIComponent(target.id)}/status`
+    return this.request<{ id: string; status: string }>(path, { method: 'PATCH', body: JSON.stringify({ action, reason }), csrfToken: await this.getCsrfToken() })
+  }
   getMonitoringOverview() { return this.request<MonitoringOverview>('/api/v1/monitoring/health') }
   getTransactionMonitoring(filters: Pick<TransactionFilters, 'dateFrom' | 'dateTo' | 'operation' | 'status' | 'channel' | 'source' | 'destination'>) { return this.request<TransactionMonitoring>(`/api/v1/monitoring/transactions?${this.params(filters)}`) }
   listAlerts(filters: AlertFilters) { return this.request<Page<AlertRecord>>(`/api/v1/monitoring/alerts?${this.params(filters)}`) }
@@ -267,6 +291,7 @@ export class FetchAdminApi implements AdminApi {
         throw new AdminApiError('unauthorized', 'Your administrator session has expired. Sign in again.')
       }
       if (response.status === 403) throw new AdminApiError('forbidden', 'Your administrator account is not authorized for this action.')
+      if (response.status === 409) throw new AdminApiError('conflict', 'This change is not allowed from the current status. Refresh and try again.')
       if (response.status === 400 || response.status === 422) throw new AdminApiError('validation', 'The request was rejected. Review the entered filters or information.')
       if (!response.ok) throw new AdminApiError('server', `The admin service returned HTTP ${response.status}.`)
       if (response.status === 204) return undefined as T

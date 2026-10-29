@@ -16,8 +16,12 @@ class MobileConfig extends _$MobileConfig {
     if (!ref.watch(appEnvironmentProvider).hasBackend) {
       return Future.value(MobileConfiguration.empty);
     }
-    // Starts the live socket that invalidates this provider on changes.
-    ref.watch(configSyncServiceProvider);
+    // Reload when the admin portal publishes a change. Several events for one
+    // change coalesce into a single rebuild.
+    final changes = ref.watch(configSyncServiceProvider).changes.listen((_) {
+      ref.invalidateSelf();
+    });
+    ref.onDispose(changes.cancel);
     return ref.watch(configRepositoryProvider).load();
   }
 

@@ -157,6 +157,8 @@ class FakeAuthRepository implements AuthRepository {
   Object? error;
   UserProfile profile;
   final signIns = <(String, String)>[];
+  final registrations = <(String, String, String)>[];
+  int signOuts = 0;
 
   @override
   Future<UserProfile> signIn({
@@ -171,13 +173,29 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<UserProfile> register({
+    required String displayName,
+    required String phone,
+    required String password,
+  }) async {
+    final failure = error;
+    if (failure != null) throw failure;
+    registrations.add((displayName, phone, password));
+    hasTokens = true;
+    return profile = UserProfile(id: 'user-new', displayName: displayName);
+  }
+
+  @override
   Future<bool> hasSession() async => hasTokens;
 
   @override
   Future<UserProfile?> currentUser() async => hasTokens ? profile : null;
 
   @override
-  Future<void> signOut() async => hasTokens = false;
+  Future<void> signOut() async {
+    signOuts++;
+    hasTokens = false;
+  }
 }
 
 /// Card vault double: records what it was asked to encrypt; can fail.

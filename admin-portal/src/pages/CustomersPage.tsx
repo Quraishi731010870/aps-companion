@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Alert, Box, Chip, MenuItem, Paper, Select, Skeleton, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField, Typography } from '@mui/material'
 import { adminApi, type CustomerFilters } from '../api/adminApi'
 import { BackendState } from '../components/BackendState'
+import { StatusChip } from '../components/StatusControls'
 import { usePreviewMode } from '../layout/PreviewContext'
 import { formatDate } from './TransactionsPage'
 
@@ -24,7 +25,7 @@ export function CustomersPage() {
     <Paper className="panel filter-panel" elevation={0}>
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.25}>
         <TextField size="small" label="Customer ID, name, or phone" value={search} onChange={e => setSearch(e.target.value)} fullWidth />
-        <Select size="small" value={filters.status ?? ''} displayEmpty onChange={e => set('status', e.target.value)} sx={{ minWidth: 150 }}><MenuItem value="">All statuses</MenuItem>{['active', 'inactive', 'suspended'].map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}</Select>
+        <Select size="small" value={filters.status ?? ''} displayEmpty onChange={e => set('status', e.target.value)} sx={{ minWidth: 150 }}><MenuItem value="">All statuses</MenuItem>{['active', 'pending', 'disabled', 'blocked', 'locked'].map(item => <MenuItem key={item} value={item}>{item}</MenuItem>)}</Select>
         <Select size="small" value={filters.sort ?? 'createdAt:desc'} onChange={e => setFilters(old => ({ ...old, sort: e.target.value, page: 0 }))} sx={{ minWidth: 175 }}><MenuItem value="createdAt:desc">Newest first</MenuItem><MenuItem value="createdAt:asc">Oldest first</MenuItem><MenuItem value="name:asc">Name A–Z</MenuItem><MenuItem value="name:desc">Name Z–A</MenuItem></Select>
       </Stack>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.25} sx={{ mt: 1.5 }}>
@@ -41,7 +42,7 @@ export function CustomersPage() {
         : query.isError ? <Alert severity="error">Customer list unavailable. The backend did not return authorized customer data; check service health or contact an administrator.</Alert>
           : <Paper className="table-panel" elevation={0}>
             <TableContainer><Table size="small"><TableHead><TableRow>{['Customer ID', 'Name', 'Phone', 'Status', 'Registered', 'Last activity'].map(item => <TableCell key={item}>{item}</TableCell>)}</TableRow></TableHead>
-              <TableBody>{query.data.items.map(customer => <TableRow hover key={customer.id} className="clickable-row" onClick={() => navigate(encodeURIComponent(customer.id))}><TableCell>{customer.id}</TableCell><TableCell>{customer.name}</TableCell><TableCell>{customer.phoneMasked ?? '—'}</TableCell><TableCell><Chip size="small" variant="outlined" label={customer.status} /></TableCell><TableCell>{formatDate(customer.createdAt)}</TableCell><TableCell>{formatDate(customer.lastActivityAt)}</TableCell></TableRow>)}
+              <TableBody>{query.data.items.map(customer => <TableRow hover key={customer.id} className="clickable-row" onClick={() => navigate(encodeURIComponent(customer.id))}><TableCell>{customer.customerNo ?? customer.id}</TableCell><TableCell>{customer.name}</TableCell><TableCell>{customer.phoneMasked ?? '—'}</TableCell><TableCell><StatusChip status={customer.status} /></TableCell><TableCell>{formatDate(customer.createdAt)}</TableCell><TableCell>{formatDate(customer.lastActivityAt)}</TableCell></TableRow>)}
                 {!query.data.items.length && <TableRow><TableCell colSpan={6}><Typography align="center" sx={{ py: 4 }} color="text.secondary">No customers matched.</Typography></TableCell></TableRow>}
               </TableBody>
             </Table></TableContainer>

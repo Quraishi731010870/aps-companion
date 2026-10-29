@@ -2,6 +2,7 @@ import 'package:afghan_emi/src/core/config/app_environment.dart';
 import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
 import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
 import 'package:afghan_emi/src/features/auth/presentation/view_models/current_user.dart';
+import 'package:afghan_emi/src/features/auth/presentation/view_models/session.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +25,9 @@ ProviderContainer _container(
 void main() {
   test('after signing in, the stored user is current and displayed', () async {
     final container = _container(FakeAuthRepository());
+    await container
+        .read(sessionProvider.notifier)
+        .signIn(identifier: '+93790000001', password: 'test-password');
 
     final user = await container.read(currentUserProvider.future);
 

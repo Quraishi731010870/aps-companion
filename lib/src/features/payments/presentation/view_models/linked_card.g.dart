@@ -39,7 +39,7 @@ final class LinkedCardProvider
   LinkedCard create() => LinkedCard();
 }
 
-String _$linkedCardHash() => r'3bb2288e213872190db7ad47d987741999c2097f';
+String _$linkedCardHash() => r'a2086dcecddab48b619e5c8244e12622d56e1e3a';
 
 /// The card linked on this device, shared by Home and the payment flow.
 /// Holds only the vault token and masked number (APS p.31).

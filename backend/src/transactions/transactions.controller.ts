@@ -10,6 +10,8 @@ import { looksLikePan, maskPan } from '../cards/card-envelope';
 import { CardEnvelopeDto } from '../cards/card-envelope.dto';
 import { PrismaService } from '../database/prisma.service';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 class TransactionQuery {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) page = 0;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 25;
@@ -55,6 +57,9 @@ export class TransactionsController {
     const transactionType = await this.prisma.transactionType.findUnique({ where: { code: String(dto.transactionType) } });
     if (!transactionType || !transactionType.enabled) throw new NotFoundException({ code: 'TRANSACTION_TYPE_UNAVAILABLE', message: 'This transaction type is not available.' });
     const customer = await this.prisma.customer.findUnique({ where: { userId: request.principal.sub }, include: { accounts: { where: { status: 'ACTIVE' }, take: 1 } } });
+    // Operator controls (customers/status-control.ts): no payments from a customer or wallet that is not active.
+    if (customer && customer.status !== 'ACTIVE') throw new ForbiddenException({ code: 'CUSTOMER_UNAVAILABLE', message: 'This account cannot make payments. Contact support.' });
+    if (customer && transactionType.financial && !customer.accounts.length) throw new ForbiddenException({ code: 'ACCOUNT_UNAVAILABLE', message: 'Your wallet is not available for payments. Contact support.' });
     const sourceReference = await this.resolveSource(dto, customer?.id);
     const now = new Date(); const identifier = `AFG-${now.getTime()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
     const transaction = await this.prisma.transaction.create({ data: { transactionTypeId: transactionType.id, customerId: customer?.id, sourceAccountId: customer?.accounts[0]?.id, transactionId: identifier, idempotencyKey: dto.idempotencyKey, amount: dto.amount.toFixed(2), currency: dto.currency.toUpperCase(), direction: transactionType.financial ? 'DEBIT' : 'NON_FINANCIAL', channel: 'MOBILE', sourceReference, destinationReference: dto.destination, deviceId: request.device?.id, deviceSignature: request.device?.signature, status: 'PENDING', events: { create: { toStatus: 'PENDING', eventType: 'CREATED', safeMetadata: { reference: dto.reference } } } } });
@@ -67,11 +72,18 @@ export class TransactionsController {
   private async resolveSource(dto: CreateTransactionDto, customerId: string | undefined): Promise<string> {
     if (dto.cardToken && dto.encryptedCard) throw new BadRequestException({ code: 'CARD_SOURCE_AMBIGUOUS', message: 'Send either a saved card or a new card, not both.' });
     if (dto.cardToken) {
-      const card = customerId ? await this.prisma.savedCard.findFirst({ where: { token: dto.cardToken, customerId, revokedAt: null }, select: { maskedPan: true } }) : null;
+      const card = customerId ? await this.prisma.savedCard.findFirst({ where: { token: dto.cardToken, customerId, revokedAt: null }, select: { maskedPan: true, status: true } }) : null;
       if (!card) throw new NotFoundException({ code: 'CARD_NOT_FOUND', message: 'Card not found.' });
+      if (card.status !== 'ACTIVE') throw new ForbiddenException({ code: 'CARD_UNAVAILABLE', message: 'This card cannot be used. Contact support.' });
       return card.maskedPan;
     }
-    if (dto.encryptedCard) return maskPan(this.cards.open(dto.encryptedCard).pan);
+    if (dto.encryptedCard) {
+      const { pan } = this.cards.open(dto.encryptedCard);
+      // A card an operator blocked stays blocked when it is typed in again as a one-off card.
+      const saved = customerId ? await this.prisma.savedCard.findUnique({ where: { customerId_panFingerprint: { customerId, panFingerprint: this.cards.vaultCipher().fingerprint(pan) } }, select: { status: true } }) : null;
+      if (saved && saved.status !== 'ACTIVE') throw new ForbiddenException({ code: 'CARD_UNAVAILABLE', message: 'This card cannot be used. Contact support.' });
+      return maskPan(pan);
+    }
     if (looksLikePan(dto.source)) throw new BadRequestException({ code: 'CARD_NUMBER_NOT_ENCRYPTED', message: 'Card numbers must be sent encrypted.' });
     return dto.source;
   }
@@ -88,7 +100,9 @@ export class TransactionsController {
   }
   @Get(':id') async detail(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     if (request.principal.type === 'ADMIN' && !request.principal.permissions.includes('transactions.view')) throw new ForbiddenException({ code: 'PERMISSION_DENIED', message: 'Transaction access is not permitted.' });
-    const item = await this.prisma.transaction.findFirst({ where: { AND: [{ OR: [{ id }, { transactionId: id }] }, request.principal.type === 'MOBILE_USER' ? { customer: { userId: request.principal.sub } } : {}] }, include: { transactionType: true, customer: { include: { user: true } }, events: { orderBy: { createdAt: 'asc' } } } });
+    // `id` is a UUID column; a transaction number like AFG-… must not be compared against it.
+    const byId = UUID.test(id) ? [{ id }, { transactionId: id }] : [{ transactionId: id }];
+    const item = await this.prisma.transaction.findFirst({ where: { AND: [{ OR: byId }, request.principal.type === 'MOBILE_USER' ? { customer: { userId: request.principal.sub } } : {}] }, include: { transactionType: true, customer: { include: { user: true } }, events: { orderBy: { createdAt: 'asc' } } } });
     if (!item) throw new NotFoundException({ code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found.' });
     return { id: item.transactionId, rrn: item.rrn, operationCode: Number(item.transactionType.code), operationLabel: item.transactionType.name, customer: item.customer?.user.displayName, amount: Number(item.amount), currency: item.currency, status: item.status.toLowerCase(), source: item.sourceReference, destination: item.destinationReference, channel: item.channel, responseCode: item.responseCode, createdAt: item.createdAt, updatedAt: item.updatedAt, timeline: item.events.map((event) => ({ label: event.eventType, at: event.createdAt, detail: `${event.fromStatus ?? 'START'} → ${event.toStatus}` })) };
   }

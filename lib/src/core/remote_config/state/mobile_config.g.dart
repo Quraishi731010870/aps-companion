@@ -42,7 +42,7 @@ final class MobileConfigProvider
   MobileConfig create() => MobileConfig();
 }
 
-String _$mobileConfigHash() => r'd081fdb5206b139e906e1b3275a6f3af10c27d5f';
+String _$mobileConfigHash() => r'72343525502cd5e4bb1f5ca2519f3dcd1f5fea99';
 
 /// Remote mobile configuration (feature flags, maintenance mode, content).
 /// Falls back to the cached copy offline, and to [MobileConfiguration.empty]

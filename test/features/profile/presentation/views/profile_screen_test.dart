@@ -1,4 +1,8 @@
+import 'package:afghan_emi/src/core/config/app_environment.dart';
+import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
+import 'package:afghan_emi/src/features/auth/domain/session_status.dart';
 import 'package:afghan_emi/src/features/auth/presentation/view_models/current_user.dart';
+import 'package:afghan_emi/src/features/auth/presentation/view_models/session.dart';
 import 'package:afghan_emi/src/features/profile/presentation/views/profile_screen.dart';
 import 'package:afghan_emi/src/features/settings/data/biometric_authenticator.dart';
 import 'package:afghan_emi/src/features/settings/domain/biometric_outcome.dart';
@@ -96,5 +100,35 @@ void main() {
     expect(find.text('Demo Customer 001'), findsOneWidget);
     expect(find.text('DC'), findsOneWidget);
     expect(find.text('+93 731010870'), findsNothing);
+  });
+
+  testWidgets('offline mock mode has no sign-out', (tester) async {
+    await _pumpProfile(tester, BiometricOutcome.verified);
+
+    expect(find.text('Sign out'), findsNothing);
+  });
+
+  testWidgets('signing out ends the session', (tester) async {
+    mockSecureStorage();
+    useTallScreen(tester);
+    final auth = FakeAuthRepository(hasTokens: true);
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      overrides: [
+        appEnvironmentProvider.overrideWithValue(backendWithTestUser),
+        authRepositoryProvider.overrideWithValue(auth),
+      ],
+    );
+
+    await tester.scrollUntilVisible(find.text('Sign out'), 200);
+    await tester.tap(find.text('Sign out'));
+    await tester.pumpAndSettle();
+
+    expect(auth.signOuts, 1);
+    expect(
+      containerOf(tester).read(sessionProvider).value,
+      SessionStatus.signedOut,
+    );
   });
 }

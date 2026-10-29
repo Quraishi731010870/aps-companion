@@ -26,3 +26,9 @@ Flutter development API URLs:
 - Browser/desktop: `http://localhost:8081`
 
 Build Flutter with `--dart-define-from-file=dart_defines.local.json`; never commit that file. Production requires HTTPS, managed secrets, managed PostgreSQL/Redis, trusted ingress origins, release signing, backups, and reviewed monitoring retention.
+
+## End-to-end tests
+
+With the stack running, `cd e2e && npm ci && npm test` exercises mobile API → backend → admin portal
+(and back) with Playwright. See `e2e/README.md`.
+
