@@ -1,11 +1,3 @@
-/// Identifier shown by the current local/demo wallet UI.
-/// A production wallet ID must come from the authenticated wallet backend.
-abstract final class WalletIdentity {
-  static const number = 'WALLET-7814';
-
-  static String get masked => '•••• ${number.substring(number.length - 4)}';
-}
-
 /// PayAfghan-specific receive QR payload. It carries only a wallet identifier,
 /// never a name, phone number, amount, credential, or payment authorization.
 abstract final class WalletQrPayload {

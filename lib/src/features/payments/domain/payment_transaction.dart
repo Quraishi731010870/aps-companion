@@ -108,7 +108,7 @@ class WalletActivity {
     required this.source,
     required this.destination,
     required this.rrn,
-    this.cardNumber = '•••• 1087',
+    this.cardNumber = '',
     this.currency = 'AFN',
     this.fee = 0,
     this.status = TransactionState.successful,

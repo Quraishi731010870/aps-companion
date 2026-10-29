@@ -7,10 +7,10 @@ import 'package:afghan_emi/src/features/payments/domain/card_details.dart';
 import 'package:afghan_emi/src/features/payments/domain/card_vault.dart';
 import 'package:afghan_emi/src/features/payments/domain/saved_card.dart';
 import 'package:afghan_emi/src/core/remote_config/data/config_repository.dart';
-import 'package:afghan_emi/src/features/payments/data/mock_payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/data/payment_gateway_provider.dart';
 import 'package:afghan_emi/src/features/payments/domain/payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/domain/payment_transaction.dart';
+import 'package:afghan_emi/src/features/payments/domain/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -23,12 +23,16 @@ class FakePaymentGateway implements PaymentGateway {
   FakePaymentGateway({
     this.state = TransactionState.successful,
     this.activities,
+    this.wallet = testWallet,
   });
 
   TransactionState state;
   Object? error;
   Object? activitiesError;
   List<WalletActivity>? activities;
+  Wallet wallet;
+  Object? walletError;
+  int walletFetches = 0;
   final requests = <PaymentRequest>[];
   int activityFetches = 0;
 
@@ -51,9 +55,86 @@ class FakePaymentGateway implements PaymentGateway {
     activityFetches++;
     final failure = activitiesError;
     if (failure != null) throw failure;
-    return activities ?? mockActivities;
+    return activities ?? testActivities;
+  }
+
+  @override
+  Future<Wallet> fetchWallet() async {
+    walletFetches++;
+    final failure = walletError;
+    if (failure != null) throw failure;
+    return wallet;
   }
 }
+
+const testWallet = Wallet(
+  id: 'WALLET-AF000001',
+  currency: 'AFN',
+  availableBalance: 24560,
+);
+
+/// Sample history for tests (the app itself ships no sample data).
+final testActivities = <WalletActivity>[
+  WalletActivity(
+    title: 'Salary payment',
+    subtitle: 'Kabul Trading Co.',
+    amount: 18500,
+    incoming: true,
+    operation: PaymentOperation.cardToWallet,
+    date: DateTime.now().subtract(const Duration(hours: 2)),
+    source: 'Kabul Trading Co. payroll',
+    destination: 'WALLET-AF000001',
+    rrn: '426981730112',
+    cardNumber: '•••• 1087',
+  ),
+  WalletActivity(
+    title: 'Mobile top-up',
+    subtitle: 'Roshan • 079 123 4567',
+    amount: 500,
+    incoming: false,
+    operation: PaymentOperation.purchase,
+    date: DateTime.now().subtract(const Duration(days: 1)),
+    source: 'APS card •••• 1087',
+    destination: 'Roshan 0791234567',
+    rrn: '426872119408',
+    fee: 5,
+  ),
+  WalletActivity(
+    title: 'Bank transfer',
+    subtitle: 'Azizi Bank • •••• 1942',
+    amount: 2200,
+    incoming: false,
+    operation: PaymentOperation.walletToCard,
+    date: DateTime.now().subtract(const Duration(days: 2)),
+    source: 'WALLET-AF000001',
+    destination: 'Azizi Bank •••• 1942',
+    rrn: 'UTR-AF-785-903184',
+    fee: 10,
+  ),
+  WalletActivity(
+    title: 'Electricity bill',
+    subtitle: 'DABS • Kabul',
+    amount: 1375,
+    incoming: false,
+    operation: PaymentOperation.purchase,
+    date: DateTime.now().subtract(const Duration(days: 4)),
+    source: 'APS card •••• 1087',
+    destination: 'DABS Kabul 994712',
+    rrn: '426553881209',
+    fee: 15,
+  ),
+  WalletActivity(
+    title: 'Cash deposit',
+    subtitle: 'Shahr-e-Naw agent',
+    amount: 5000,
+    incoming: true,
+    operation: PaymentOperation.cashIn,
+    date: DateTime.now().subtract(const Duration(days: 7)),
+    source: 'Shahr-e-Naw agent AGT-019',
+    destination: 'WALLET-AF000001',
+    rrn: '426093725841',
+  ),
+];
 
 /// Backend environment with the seeded test user configured.
 const backendWithTestUser = AppEnvironment(

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:afghan_emi/src/core/network/api_client.dart';
 import 'package:afghan_emi/src/features/payments/data/backend_payment_gateway.dart';
 import 'package:afghan_emi/src/features/payments/domain/payment_transaction.dart';
+import 'package:afghan_emi/src/features/payments/domain/wallet.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -112,5 +113,38 @@ void main() {
     ).fetchActivities();
 
     expect(activities, isEmpty);
+  });
+
+  test('reads the wallet from /api/v1/wallet', () async {
+    late http.Request sent;
+    final wallet = await _gateway((request) {
+      sent = request;
+      return http.Response(
+        jsonEncode({
+          'walletId': 'WALLET-AF000001',
+          'currency': 'AFN',
+          'availableBalance': 1250.5,
+        }),
+        200,
+      );
+    }).fetchWallet();
+
+    expect(sent.url.path, '/api/v1/wallet');
+    expect(
+      wallet,
+      const Wallet(
+        id: 'WALLET-AF000001',
+        currency: 'AFN',
+        availableBalance: 1250.5,
+      ),
+    );
+    expect(wallet.masked, '•••• 0001');
+  });
+
+  test('a malformed wallet response is an error, not a fake wallet', () {
+    expect(
+      _gateway((_) => http.Response('{"walletId":""}', 200)).fetchWallet(),
+      throwsFormatException,
+    );
   });
 }

@@ -2,16 +2,20 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AccountStatus, PrincipalType, SessionStatus } from '@prisma/client';
 import argon2 from 'argon2';
 import jwt, { type SignOptions } from 'jsonwebtoken';
+import type { Request } from 'express';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import { RuntimeConfig } from '../configuration/runtime-config.service';
+import type { DeviceBindingDto } from '../devices/device-binding.dto';
+import { DeviceBindingService } from '../devices/device-binding.service';
 import type { AuthPrincipal } from './auth.types';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService, private readonly config: RuntimeConfig) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: RuntimeConfig, private readonly devices: DeviceBindingService) {}
 
-  async login(identifier: string, password: string, expectedType?: PrincipalType) {
+  async login(identifier: string, password: string, expectedType?: PrincipalType, device?: { binding: DeviceBindingDto; request: Request }) {
+    if (device) await this.devices.verifyNewKey(device.binding.publicKey, device.request);
     const normalized = identifier.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
       where: { OR: [{ email: { equals: normalized, mode: 'insensitive' } }, { phone: identifier.trim() }] },
@@ -32,13 +36,14 @@ export class AuthService {
     }
     await this.recordAttempt(user.id, normalized, true);
     await this.prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
+    const deviceId = device ? await this.devices.bind(user.id, device.binding) : undefined;
     const session = await this.prisma.session.create({
-      data: { userId: user.id, expiresAt: new Date(Date.now() + this.config.jwtRefreshTtlDays * 86_400_000) },
+      data: { userId: user.id, deviceId, expiresAt: new Date(Date.now() + this.config.jwtRefreshTtlDays * 86_400_000) },
     });
     return { ...(await this.issueTokens(user, session.id)), displayName: user.displayName };
   }
 
-  async refresh(refreshToken: string) {
+  async refresh(refreshToken: string, request?: Request) {
     const decoded = this.verifyRefresh(refreshToken);
     const tokenHash = this.hash(refreshToken);
     const session = await this.prisma.session.findFirst({
@@ -46,6 +51,11 @@ export class AuthService {
       include: { user: { include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } } } },
     });
     if (!session || session.user.status !== AccountStatus.ACTIVE) throw new UnauthorizedException({ code: 'SESSION_INVALID', message: 'The session is invalid or expired.' });
+    // A stolen refresh token is useless without the device key it was issued to.
+    if (session.user.principalType === PrincipalType.MOBILE_USER) {
+      if (!request) throw new UnauthorizedException({ code: 'DEVICE_SIGNATURE_REQUIRED', message: 'This device could not be verified.' });
+      await this.devices.verifyForSession(session.id, request);
+    }
     return { ...(await this.issueTokens(session.user, session.id)), displayName: session.user.displayName };
   }
 

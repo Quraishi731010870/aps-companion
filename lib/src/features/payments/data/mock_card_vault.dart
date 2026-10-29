@@ -14,8 +14,6 @@ class MockCardVault implements CardVault {
   Future<SavedCard> saveCard(CardDetails card) async => _linked = SavedCard(
     token: 'mock_${card.maskedPan.substring(card.maskedPan.length - 4)}',
     maskedPan: card.maskedPan,
-    expiryMonth: card.expiryMonth,
-    expiryYear: card.expiryYear,
     holderName: card.holderName,
   );
 

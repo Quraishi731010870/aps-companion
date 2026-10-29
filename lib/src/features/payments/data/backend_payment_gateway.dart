@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../domain/payment_gateway.dart';
 import '../domain/payment_transaction.dart';
+import '../domain/wallet.dart';
 
 class BackendPaymentGateway implements PaymentGateway {
   BackendPaymentGateway(this.api);
@@ -43,6 +44,15 @@ class BackendPaymentGateway implements PaymentGateway {
         status: _state('${row['status']}'),
       );
     }).toList();
+  }
+
+  @override
+  Future<Wallet> fetchWallet() async {
+    final wallet = Wallet.fromJson(await api.getJson('/api/v1/wallet'));
+    if (wallet == null) {
+      throw const FormatException('Wallet response is invalid.');
+    }
+    return wallet;
   }
 
   TransactionState _state(String value) => switch (value.toUpperCase()) {

@@ -21,12 +21,6 @@ class _SavedCardSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final expiry = switch ((card.expiryMonth, card.expiryYear)) {
-      (final int month, final int year) =>
-        '${month.toString().padLeft(2, '0')}/'
-            '${(year % 100).toString().padLeft(2, '0')}',
-      _ => null,
-    };
     final holder = card.holderName?.trim();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -68,12 +62,6 @@ class _SavedCardSheet extends StatelessWidget {
                     leading: const Icon(Icons.person_outline),
                     title: Text(context.tr('Cardholder')),
                     subtitle: Text(holder),
-                  ),
-                if (expiry != null)
-                  ListTile(
-                    leading: const Icon(Icons.event_outlined),
-                    title: Text(context.tr('Expiry')),
-                    subtitle: Text(expiry),
                   ),
               ],
             ),

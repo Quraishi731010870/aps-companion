@@ -8,7 +8,7 @@ import { ApiExceptionFilter } from './common/api-exception.filter';
 import { RuntimeConfig } from './configuration/runtime-config.service';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   const config = app.get(RuntimeConfig);
   app.use(helmet());
   app.use(cookieParser());

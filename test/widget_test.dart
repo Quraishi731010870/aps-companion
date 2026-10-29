@@ -1,4 +1,3 @@
-import 'package:afghan_emi/src/features/profile/domain/wallet_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,7 +25,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Receive to your wallet'), findsOneWidget);
-    expect(find.text(WalletIdentity.number), findsOneWidget);
+    expect(find.text(testWallet.id), findsOneWidget);
     expect(find.textContaining('payment backend is connected'), findsOneWidget);
   });
 

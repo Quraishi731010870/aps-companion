@@ -7,7 +7,7 @@ class UserProfile {
   const UserProfile({required this.id, required this.displayName});
 
   /// Shown when no account is signed in (offline mock mode).
-  static const demo = UserProfile(id: 'demo', displayName: 'Asif Quraishi');
+  static const demo = UserProfile(id: 'demo', displayName: 'Offline user');
 
   final String id;
   final String displayName;

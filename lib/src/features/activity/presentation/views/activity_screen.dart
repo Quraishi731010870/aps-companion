@@ -30,13 +30,25 @@ class ActivityScreen extends ConsumerWidget {
               ),
               sliver: SliverToBoxAdapter(
                 child: _Header(
-                  onExport: activities.hasValue
+                  onExport: activities.value?.isNotEmpty ?? false
                       ? () => _export(context, ref)
                       : null,
                 ),
               ),
             ),
             switch (activities) {
+              AsyncData(:final value) when value.isEmpty => const SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: _padding),
+                sliver: SliverToBoxAdapter(
+                  child: Card(
+                    child: EmptyView(
+                      icon: Icons.receipt_long_outlined,
+                      message: 'No transactions yet',
+                      detail: 'Payments you make will appear here.',
+                    ),
+                  ),
+                ),
+              ),
               AsyncData(:final value) => SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: _padding),
                 sliver: DecoratedSliver(

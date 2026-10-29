@@ -35,11 +35,17 @@ class BackendCardVault implements CardVault {
   Future<SavedCard?> linkedCard() async {
     final raw = await _store.read(SecureKey.linkedCard);
     if (raw == null) return null;
+    final SavedCard? card;
     try {
-      return SavedCard.fromJson(jsonDecode(raw));
+      card = SavedCard.fromJson(jsonDecode(raw));
     } on FormatException {
       return null;
     }
+    // Earlier builds also stored the expiry; rewrite without it.
+    if (card != null && raw.contains('expiry')) {
+      await _store.write(SecureKey.linkedCard, jsonEncode(card.toJson()));
+    }
+    return card;
   }
 
   @override

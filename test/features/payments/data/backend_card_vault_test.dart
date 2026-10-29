@@ -43,8 +43,6 @@ void main() {
               jsonEncode({
                 'token': 'ctok_abc',
                 'maskedPan': '603799******1234',
-                'expiryMonth': 12,
-                'expiryYear': 2029,
                 'holderName': null,
               }),
               201,
@@ -77,6 +75,40 @@ void main() {
       expect(SavedCard.fromJson(jsonDecode(stored!)), saved);
     },
   );
+
+  test('only the token and masked number are kept, never the expiry', () async {
+    await vault().saveCard(_card);
+
+    final stored = await store.read(SecureKey.linkedCard);
+    expect(jsonDecode(stored!), {
+      'token': 'ctok_abc',
+      'maskedPan': '603799******1234',
+      'holderName': null,
+    });
+  });
+
+  test('an expiry stored by an earlier build is removed on read', () async {
+    await store.write(
+      SecureKey.linkedCard,
+      jsonEncode({
+        'token': 'ctok_old',
+        'maskedPan': '603799******1234',
+        'expiryMonth': 12,
+        'expiryYear': 2029,
+      }),
+    );
+
+    final card = await vault().linkedCard();
+
+    expect(card?.token, 'ctok_old');
+    expect(await store.read(SecureKey.linkedCard), isNot(contains('expiry')));
+  });
+
+  test('the envelope never carries a CVV', () async {
+    final payload = openTestEnvelope(await vault().encryptForPayment(_card));
+
+    expect(payload.keys, unorderedEquals(['pan', 'expMonth', 'expYear', 'ts']));
+  });
 
   test('the linked card survives a restart', () async {
     await vault().saveCard(_card);

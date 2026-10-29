@@ -11,10 +11,17 @@ enum SecureKey {
   userProfile('afghanpay_user_profile'),
 
   /// Vault token and masked number of the linked card. Never a full PAN.
-  linkedCard('afghanpay_linked_card');
+  linkedCard('afghanpay_linked_card'),
 
-  const SecureKey(this.storageKey);
+  /// Installation id and Ed25519 seed of this device's signing key. Kept on
+  /// sign-out so the backend keeps recognising the device.
+  deviceKey('afghanpay_device_key', sessionScoped: false);
+
+  const SecureKey(this.storageKey, {this.sessionScoped = true});
   final String storageKey;
+
+  /// Removed when a session ends.
+  final bool sessionScoped;
 }
 
 /// Encrypted on-device storage for tokens and the signed-in user.
@@ -72,7 +79,16 @@ class SecureStore {
     await _storage.delete(key: key.storageKey);
   }
 
-  /// Removes every value this app stores, e.g. when a session ends.
+  /// Removes everything tied to the signed-in user; the device key stays.
+  Future<void> clearSession() async {
+    await _ensureReady();
+    await Future.wait([
+      for (final key in SecureKey.values)
+        if (key.sessionScoped) _storage.delete(key: key.storageKey),
+    ]);
+  }
+
+  /// Removes every value this app stores, including the device key.
   Future<void> clearAll() async {
     await _ensureReady();
     await Future.wait([

@@ -30,6 +30,9 @@ void main() {
     expect(find.text('Your linked card'), findsOneWidget);
     expect(find.text('6037 99** **** 1234'), findsOneWidget);
     expect(find.text('Link your card'), findsNothing);
+    // Only the masked number is kept; the expiry is never stored or shown.
+    expect(find.text('12/29'), findsNothing);
+    expect(find.text('Expiry'), findsNothing);
     expect(find.textContaining('6037991234561234'), findsNothing);
   });
 

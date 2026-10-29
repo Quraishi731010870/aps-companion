@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
 import '../../domain/payment_transaction.dart';
+import '../widgets/transaction_state_style.dart';
 
 class ReceiptScreen extends StatelessWidget {
   const ReceiptScreen({super.key, required this.activity});
@@ -11,6 +12,7 @@ class ReceiptScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final receipt = _receiptText(context);
+    final status = activity.status;
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('Transaction receipt'))),
       body: ListView(
@@ -21,14 +23,14 @@ class ReceiptScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.check_circle_rounded,
+                  Icon(
+                    status.icon,
                     size: 62,
-                    color: Color(0xff087f67),
+                    color: status.color(Theme.of(context).colorScheme),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    context.tr('Successful'),
+                    context.tr(status.label),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -50,18 +52,27 @@ class ReceiptScreen extends StatelessWidget {
                   ),
                   _row(context.tr('Source'), activity.source),
                   _row(context.tr('Destination'), activity.destination),
-                  _row(context.tr('Card number'), activity.cardNumber),
-                  _row(context.tr('RRN / UTR'), activity.rrn),
+                  if (activity.cardNumber.isNotEmpty)
+                    _row(context.tr('Card number'), activity.cardNumber),
+                  // Pending transactions have no RRN until the switch replies.
+                  if (activity.rrn.isNotEmpty)
+                    _row(context.tr('RRN / UTR'), activity.rrn),
                   _row(context.tr('Currency'), activity.currency),
                   _row(
                     context.tr('Fee'),
                     '${activity.fee.toStringAsFixed(0)} ${activity.currency}',
                   ),
-                  _row(context.tr('Status'), context.tr('Successful')),
+                  _row(context.tr('Status'), context.tr(status.label)),
                   _row('Channel', 'PayAfghan Mobile'),
                   _row('Institution', 'Afghan EMI / APS'),
-                  _row('Authorization code', activity.rrn.substring(0, 6)),
-                  _row('Settlement status', 'Settled'),
+                  if (activity.rrn.length >= 6)
+                    _row('Authorization code', activity.rrn.substring(0, 6)),
+                  _row(
+                    'Settlement status',
+                    status == TransactionState.successful
+                        ? 'Settled'
+                        : 'Not settled',
+                  ),
                 ],
               ),
             ),
@@ -124,7 +135,7 @@ class ReceiptScreen extends StatelessWidget {
 
   String _receiptText(BuildContext context) =>
       '''PayAfghan transaction receipt
-Status: Successful
+Status: ${activity.status.label}
 Amount: ${activity.amount.toStringAsFixed(0)} ${activity.currency}
 Date: ${_date(activity.date)}
 Type: ${activity.operation.label} (${activity.operation.code})

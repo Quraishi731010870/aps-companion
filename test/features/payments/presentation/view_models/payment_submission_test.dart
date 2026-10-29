@@ -7,6 +7,7 @@ import 'package:afghan_emi/src/features/payments/data/payment_gateway_provider.d
 import 'package:afghan_emi/src/features/payments/domain/card_details.dart';
 import 'package:afghan_emi/src/features/payments/domain/payment_transaction.dart';
 import 'package:afghan_emi/src/features/payments/presentation/view_models/payment_submission.dart';
+import 'package:afghan_emi/src/features/payments/presentation/view_models/wallet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -104,6 +105,16 @@ void main() {
     await container.read(activitiesProvider.future);
 
     expect(gateway.activityFetches, 2);
+  });
+
+  test('a successful payment reloads the wallet balance', () async {
+    container.listen(walletProvider, (_, _) {});
+    await container.read(walletProvider.future);
+
+    await submit();
+    await container.read(walletProvider.future);
+
+    expect(gateway.walletFetches, 2);
   });
 
   test('a failed payment leaves the history untouched', () async {

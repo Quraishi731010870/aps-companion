@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:afghan_emi/src/core/network/api_client.dart';
+import 'package:afghan_emi/src/core/security/device_key_signer.dart';
+import 'package:afghan_emi/src/core/security/request_signature.dart';
 import 'package:afghan_emi/src/core/storage/secure_store.dart';
 import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
 import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
@@ -25,10 +27,12 @@ Map<String, Object> _loginResponse({String type = 'MOBILE_USER'}) => {
 
 void main() {
   late SecureStore store;
+  late DeviceKeySigner signer;
 
   setUp(() {
     mockSecureStorage();
     store = SecureStore();
+    signer = DeviceKeySigner(store);
   });
 
   AuthRepository repository(http.Response Function(http.Request) reply) =>
@@ -37,8 +41,10 @@ void main() {
           baseUrl: 'http://api.test',
           client: MockClient((request) async => reply(request)),
           store: store,
+          signer: signer,
         ),
         store,
+        signer,
       );
 
   test('signs in without a bearer token and stores tokens and user', () async {
@@ -55,10 +61,14 @@ void main() {
 
     expect(sent.url.path, '/api/v1/auth/login');
     expect(sent.headers.containsKey('Authorization'), isFalse);
+    final device = await signer.binding();
     expect(jsonDecode(sent.body), {
       'identifier': '+93790000001',
       'password': 'secret',
+      'device': device.toJson(),
     });
+    expect(device.publicKey, hasLength(43));
+    expect(sent.headers[RequestSignature.signatureHeader], hasLength(86));
     const expected = UserProfile(
       id: 'user-1',
       displayName: 'Demo Customer 001',

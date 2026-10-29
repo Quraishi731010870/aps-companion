@@ -79,6 +79,7 @@ lib/
       config/                  AppEnvironment (only place --dart-define is read)
       network/                 ApiClient
       storage/                 SecureStore (flutter_secure_storage wrapper, SecureKey)
+      security/                RequestSigner, DeviceKeySigner (Ed25519 device key), request signature format
       remote_config/
         data/                  ConfigRepository, ConfigSyncService (socket)
         state/                 MobileConfig, currentConfig
@@ -176,6 +177,7 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `appEnvironmentProvider` | `core/config` | Build-time `--dart-define` values; override in tests |
 | `apiClientProvider` | `core/network` | HTTP client with token refresh |
 | `secureStoreProvider` | `core/storage` | Encrypted storage for tokens and the user profile |
+| `requestSignerProvider` | `core/security` | Signs every API request with this installation's Ed25519 device key |
 | `configRepositoryProvider`, `configSyncServiceProvider` | `core/remote_config/data` | Remote config with offline cache; live config socket |
 | `mobileConfigProvider`, `currentConfigProvider` | `core/remote_config/state` | Remote config (flags, maintenance mode), previous value kept while reloading |
 | `cardVaultProvider` | `features/payments/data` | Backend card vault (encrypt, vault, pinned key) or offline mock |
@@ -184,6 +186,7 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `paymentSubmissionProvider` | `features/payments/presentation/view_models` | Submits a payment; double-tap guard; reuses the idempotency key on retry |
 | `linkedCardProvider` | `features/payments/presentation/view_models` | Linked `SavedCard` (vault token + masked number), persisted in secure storage |
 | `activitiesProvider` | `features/activity/presentation/view_models` | Wallet history (invalidated after each payment) |
+| `walletProvider` | `features/payments/presentation/view_models` | Customer's wallet id and balance from `GET /api/v1/wallet` (invalidated after each payment) |
 | `biometricAuthenticatorProvider` | `features/settings/data` | Platform biometric check |
 | `settingsProvider` | `features/settings/presentation/view_models` | Language, biometric flag, transaction limits |
 | `authRepositoryProvider` | `features/auth/data` | Mobile login; stores tokens via `ApiClient` |
@@ -274,7 +277,8 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
   - Store the minimum: `UserProfile` holds only id and display name; no phone, roles,
     permissions or passwords. Only `MOBILE_USER` accounts may sign in to the app.
   - Ending a session (`ApiClient.clearSession` / `AuthRepository.signOut`) clears every
-    `SecureKey`, not just tokens.
+    session-scoped `SecureKey`, not just tokens. Only `SecureKey.deviceKey` stays, so the
+    device remains recognised; a reinstall wipes it.
 - Never store, log or display a full card PAN or CVV. Show masked values
   (`CardNumber.masked` → `603799******1234`, displayed as `6037 99** **** 1234`).
 - **Card data in transit** (`features/payments/data/card_encryptor.dart` ↔
@@ -287,10 +291,20 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
   - Saved cards: `POST /api/v1/cards` vaults the card (AES-256-GCM at rest with
     `CARD_VAULT_KEY`, bound to the customer); the device keeps only the token and masked
     number (`SecureKey.linkedCard`). Pay with `cardToken`; one-off cards with `encryptedCard`.
+  - Only the card number is saved. The expiry is used once to reject expired cards and is
+    never stored, on the device or in `saved_cards`. A CVV is never collected, sent or stored,
+    and the backend rejects an envelope that contains one.
   - The backend rejects a raw card number in `source` (`CARD_NUMBER_NOT_ENCRYPTED`) and stores
     only masked numbers in transactions.
   - Any change to the envelope must change both files and keep the shared RFC 7638 test
     vector passing on both sides.
+- **Device binding and request signing** (`core/security/` ↔ `backend/src/devices/`): each
+  installation has an Ed25519 key (`SecureKey.deviceKey`), registered at login. `ApiClient`
+  signs every request (method, path + query, timestamp, nonce, SHA-256 of the exact body bytes);
+  the backend verifies it for every mobile request, blocks replays and stale timestamps, and
+  stores the signing device on each transaction. Send bodies only through `ApiClient` so the
+  signed bytes are the sent bytes. Any change to the format must change both
+  `request_signature.dart` and `request-signature.ts` and keep the shared test vector passing.
 - Errors shown to users stay generic (see `ApiException`); don't surface raw server bodies.
 - Read `SECURITY.md` before touching auth, Google Sheets or ISO 8583 code.
 

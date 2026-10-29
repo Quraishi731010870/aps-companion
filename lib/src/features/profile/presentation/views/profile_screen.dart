@@ -4,12 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../admin/presentation/views/google_sheets_screen.dart';
 import '../../../admin/presentation/views/management_screen.dart';
-import '../../../auth/domain/user_profile.dart';
 import '../../../auth/presentation/view_models/current_user.dart';
 import '../../../settings/domain/biometric_outcome.dart';
 import '../../../settings/presentation/view_models/settings.dart';
 import '../../../settings/presentation/views/limits_screen.dart';
-import '../../domain/wallet_identity.dart';
+import '../../../payments/presentation/view_models/wallet.dart';
 import 'security_screen.dart';
 import 'wallet_qr_screen.dart';
 
@@ -43,7 +42,11 @@ class ProfileScreen extends ConsumerWidget {
                 'My wallet QR',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
-              subtitle: Text('Receive to wallet ${WalletIdentity.masked}'),
+              subtitle: Text(switch (ref.watch(walletProvider)) {
+                AsyncData(:final value) => 'Receive to wallet ${value.masked}',
+                AsyncError() => context.tr('Wallet unavailable'),
+                _ => context.tr('Loading wallet…'),
+              }),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.of(
                 context,
@@ -287,13 +290,6 @@ class _ProfileCard extends ConsumerWidget {
                       fontSize: 18,
                     ),
                   ),
-                  // The phone number is not stored on the device; only the
-                  // offline demo shows a sample one.
-                  if (user == UserProfile.demo)
-                    const Text(
-                      '+93 731010870',
-                      style: TextStyle(color: Colors.black54),
-                    ),
                 ],
               ),
             ),

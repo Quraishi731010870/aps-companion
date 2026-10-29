@@ -13,6 +13,14 @@ void main() {
       expect('$card', isNot(contains('6037991234561234')));
     });
 
+    test('a card expires after its expiry month', () {
+      final now = DateTime(2026, 10, 29);
+      expect(CardDetails.isExpired(10, 2026, now), isFalse);
+      expect(CardDetails.isExpired(9, 2026, now), isTrue);
+      expect(CardDetails.isExpired(1, 2027, now), isFalse);
+      expect(CardDetails.isExpired(12, 2025, now), isTrue);
+    });
+
     test('parses MM/YY expiry', () {
       expect(CardDetails.parseExpiry('12/29'), (12, 2029));
       expect(CardDetails.parseExpiry('13/29'), isNull);

@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/formatting/currency_format.dart';
 import '../../../../core/l10n/app_localizations.dart';
-import '../../../profile/domain/wallet_identity.dart';
+import '../../../profile/domain/wallet_qr_payload.dart';
 import '../../../settings/presentation/view_models/settings.dart';
 import '../../domain/card_details.dart';
 import '../../domain/card_number.dart';
 import '../../domain/payment_transaction.dart';
 import '../view_models/linked_card.dart';
 import '../view_models/payment_submission.dart';
+import '../view_models/wallet.dart';
 import '../widgets/transaction_state_style.dart';
 import 'qr_scanner_screen.dart';
 import 'receipt_screen.dart';
@@ -78,6 +79,13 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(paymentSubmissionProvider, _onSubmissionChanged);
+    // The wallet id arrives asynchronously; fill it in once it does.
+    ref.listen(walletProvider, (_, _) {
+      if (!widget.operation.requiresAmount ||
+          fundingSource == PaymentFundingSource.wallet) {
+        _syncSource();
+      }
+    });
     final loading = ref.watch(
       paymentSubmissionProvider.select((submission) => submission.isLoading),
     );
@@ -119,9 +127,12 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            subtitle: Text(
-                              'PayAfghan wallet ${WalletIdentity.masked}',
-                            ),
+                            subtitle: Text(switch (ref.watch(walletProvider)) {
+                              AsyncData(:final value) =>
+                                'PayAfghan wallet ${value.masked}',
+                              AsyncError() => context.tr('Wallet unavailable'),
+                              _ => context.tr('Loading wallet…'),
+                            }),
                           ),
                           const Divider(height: 1, indent: 56),
                         ],
@@ -297,7 +308,7 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
   void _syncSource() {
     if (!widget.operation.requiresAmount ||
         fundingSource == PaymentFundingSource.wallet) {
-      source.text = WalletIdentity.number;
+      source.text = ref.read(walletProvider).value?.id ?? '';
     } else if (fundingSource == PaymentFundingSource.linkedCard) {
       source.text = ref.read(linkedCardProvider).value?.maskedPan ?? '';
     } else {
@@ -503,9 +514,6 @@ class _PaymentResultDialog extends StatelessWidget {
               '$biller • ${request.destination}',
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-            Text('${context.tr('Due amount')}: 1,375 AFN'),
-            Text('${context.tr('Due date')}: 2026-10-15'),
-            Text('${context.tr('Customer')}: Asif Quraishi'),
             const SizedBox(height: 10),
           ],
           Text('${context.tr('Transaction type')}: ${request.operation.code}'),
