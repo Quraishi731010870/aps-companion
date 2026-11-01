@@ -7,6 +7,8 @@ import '../../../admin/presentation/views/management_screen.dart';
 import '../../../../core/config/app_environment.dart';
 import '../../../auth/presentation/view_models/current_user.dart';
 import '../../../auth/presentation/view_models/session.dart';
+import '../../../developer/presentation/views/developer_mode_screen.dart';
+import '../../../device_integrity/presentation/views/device_security_screen.dart';
 import '../../../settings/domain/biometric_outcome.dart';
 import '../../../settings/presentation/view_models/settings.dart';
 import '../../../settings/presentation/views/limits_screen.dart';
@@ -125,6 +127,17 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1, indent: 64),
                 _Setting(
+                  Icons.security_rounded,
+                  context.tr('Device security'),
+                  context.tr('Root, jailbreak and tampering checks'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const DeviceSecurityScreen(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, indent: 64),
+                _Setting(
                   Icons.speed_outlined,
                   context.tr('Transaction limits'),
                   context.tr('Daily and monthly controls'),
@@ -215,6 +228,21 @@ class ProfileScreen extends ConsumerWidget {
                     MaterialPageRoute(builder: (_) => const ManagementScreen()),
                   ),
                 ),
+                if (!ref.watch(
+                  appEnvironmentProvider.select((e) => e.isRelease),
+                )) ...[
+                  const Divider(height: 1, indent: 64),
+                  _Setting(
+                    Icons.developer_mode_rounded,
+                    context.tr('Developer mode'),
+                    context.tr('Integrity overrides and app diagnostics'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const DeveloperModeScreen(),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

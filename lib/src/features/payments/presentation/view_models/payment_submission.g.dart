@@ -39,7 +39,7 @@ final class PaymentSubmissionProvider
   PaymentSubmission create() => PaymentSubmission();
 }
 
-String _$paymentSubmissionHash() => r'd22ebf9653a00e7e3aad9910c507b8cf47f0d3b5';
+String _$paymentSubmissionHash() => r'593050a883b7961a3883c1151701efa58b90936c';
 
 /// ViewModel for submitting one payment. `null` data means nothing submitted
 /// yet; errors surface as [AsyncError] for the view to report.

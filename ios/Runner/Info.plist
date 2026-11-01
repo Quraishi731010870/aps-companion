@@ -30,6 +30,15 @@
 	<string>PayAfghan uses the camera to scan payment QR codes.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>PayAfghan uses Face ID to unlock your wallet and confirm payments.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>cydia</string>
+		<string>undecimus</string>
+		<string>sileo</string>
+		<string>zbra</string>
+		<string>filza</string>
+		<string>activator</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

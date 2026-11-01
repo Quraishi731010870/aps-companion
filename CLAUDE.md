@@ -110,6 +110,8 @@ lib/
 | `profile` | Profile, wallet identity and QR, security (PIN/password) |
 | `settings` | `AppSettings`/`TransactionLimits`, biometrics, limits screen |
 | `admin` | Prototype-only tools: management/ISO console, Google Sheets |
+| `device_integrity` | Root/jailbreak/emulator/debugger/Frida checks (`jailbreak_root_detection`), APS p.44 risk policy (low → warn, medium → block payments, high → block app), Device security screen, blocked screen, banner |
+| `developer` | Debug/profile-only Developer mode screen: integrity overrides and app diagnostics (never shows secrets) |
 
 Rules:
 - A new feature gets its own `features/<name>/` folder with only the sub-folders it needs.
@@ -196,6 +198,8 @@ GetX, MobX or new `ChangeNotifier`/`InheritedWidget` state.
 | `authRepositoryProvider` | `features/auth/data` | Mobile login; stores tokens via `ApiClient` |
 | `currentUserProvider`, `displayedUserProvider` | `features/auth/presentation/view_models` | Signed-in `UserProfile` from secure storage; UI falls back to the demo user offline |
 | `sessionProvider` | `features/auth/presentation/view_models` | Signed in / out; `signIn`, `register`, `signOut`; returns to signed out when the server ends the session; no auto-retry |
+| `deviceIntegrityCheckerProvider` | `features/device_integrity/data` | Plugin checker on Android/iOS, unsupported elsewhere; override with `FakeDeviceIntegrityChecker` in tests |
+| `deviceIntegrityProvider`, `integrityOverridesControllerProvider`, `integrityStatusProvider` | `features/device_integrity/presentation/view_models` | Latest check (`recheck()` runs before every payment); developer overrides; enforced verdict (release builds always enforce, ignore overrides) |
 
 `context.tr()` reads the locale from `Localizations`, so it needs no provider.
 

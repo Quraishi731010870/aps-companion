@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../device_integrity/domain/device_integrity_report.dart';
 import '../../../../core/formatting/currency_format.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../profile/domain/wallet_qr_payload.dart';
@@ -377,6 +378,10 @@ class _PaymentFlowScreenState extends ConsumerState<PaymentFlowScreen> {
     switch (next) {
       case AsyncData(:final value?):
         _showResult(value);
+      case AsyncError(error: PaymentsBlockedException()):
+        _showMessage(
+          'Payments are turned off on this device to protect your account.',
+        );
       case AsyncError():
         _showMessage('The payment could not be completed. Please try again.');
       default:

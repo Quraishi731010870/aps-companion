@@ -237,4 +237,69 @@ const _dari = <String, String>{
       'اتصال به سرور پی‌افغان ممکن نشد. اتصال خود را بررسی کنید.',
   'Something went wrong. Please try again.':
       'مشکلی پیش آمد. لطفاً دوباره تلاش کنید.',
+  'Device security': 'امنیت دستگاه',
+  'Root, jailbreak and tampering checks': 'بررسی روت، جیلبریک و دستکاری',
+  'Developer mode': 'حالت توسعه‌دهنده',
+  'Integrity overrides and app diagnostics':
+      'تنظیمات بررسی امنیت و عیب‌یابی اپ',
+  'Enforce or simulate detections': 'اجرا یا شبیه‌سازی تشخیص‌ها',
+  'Tap to see what was found': 'برای دیدن نتیجه بزنید',
+  'The device checks could not run.': 'بررسی‌های دستگاه انجام نشد.',
+  'Device checks run only on Android and iOS.':
+      'بررسی دستگاه فقط روی اندروید و iOS انجام می‌شود.',
+  'Last checked': 'آخرین بررسی',
+  'Check again': 'بررسی دوباره',
+  'Debug build: nothing is blocked. Release builds enforce this policy.':
+      'نسخه آزمایشی: چیزی مسدود نمی‌شود. نسخه نهایی این قاعده را اجرا می‌کند.',
+  'Detected': 'تشخیص داده شد',
+  'Simulated': 'شبیه‌سازی شده',
+  'Not detected': 'تشخیص داده نشد',
+  'Use PayAfghan on an unmodified phone, or contact support.': 'از پی‌افغان روی یک گوشی دستکاری‌نشده استفاده کنید یا با پشتیبانی تماس بگیرید.',
+  'Developer mode is off in release builds.':
+      'حالت توسعه‌دهنده در نسخه نهایی خاموش است.',
+  'Payments are turned off on this device to protect your account.':
+      'برای محافظت از حساب شما، پرداخت روی این دستگاه خاموش است.',
+  'No risk': 'بدون خطر',
+  'Low risk': 'خطر کم',
+  'Medium risk': 'خطر متوسط',
+  'High risk': 'خطر زیاد',
+  'This device passed the security checks':
+      'این دستگاه بررسی‌های امنیتی را گذراند',
+  'Security warning': 'هشدار امنیتی',
+  'Payments are turned off on this device': 'پرداخت روی این دستگاه خاموش است',
+  'This device cannot be used': 'از این دستگاه نمی‌توان استفاده کرد',
+  'No root, jailbreak or tampering was found.':
+      'هیچ روت، جیلبریک یا دستکاری پیدا نشد.',
+  'Some settings on this device make it less safe. You can keep using PayAfghan.': 'برخی تنظیمات این دستگاه امنیت آن را کم می‌کند. می‌توانید به استفاده از پی‌افغان ادامه دهید.',
+  'You can still see your balance and history, but sending money is blocked to protect your account.': 'هنوز می‌توانید موجودی و تاریخچه را ببینید، اما برای محافظت از حساب شما ارسال پول مسدود است.',
+  'This device has been changed in a way that puts your money at risk, such as root or jailbreak.': 'این دستگاه طوری تغییر کرده که پول شما را در خطر می‌اندازد، مانند روت یا جیلبریک.',
+  'Root or jailbreak': 'روت یا جیلبریک',
+  'The system has been changed to give apps full control of the device.':
+      'سیستم طوری تغییر کرده که اپ‌ها کنترل کامل دستگاه را دارند.',
+  'Root management tools': 'ابزارهای مدیریت روت',
+  'Tools such as Magisk or Cydia are installed.':
+      'ابزارهایی مانند Magisk یا Cydia نصب شده‌اند.',
+  'Hooking framework': 'ابزار هوکینگ',
+  'Frida or a similar tool can change the app while it runs.':
+      'Frida یا ابزار مشابه می‌تواند اپ را هنگام اجرا تغییر دهد.',
+  'App signature': 'امضای اپ',
+  'The app has been modified or re-signed.':
+      'اپ تغییر کرده یا دوباره امضا شده است.',
+  'Emulator or simulator': 'شبیه‌ساز',
+  'The app is running on a virtual device, not a real phone.':
+      'اپ روی دستگاه مجازی اجرا می‌شود، نه گوشی واقعی.',
+  'Debugger': 'دیباگر',
+  'A debugger is attached to the app.': 'یک دیباگر به اپ وصل است.',
+  'Reverse-engineering tools': 'ابزارهای مهندسی معکوس',
+  'Tools for inspecting the app were found.': 'ابزارهای بررسی اپ پیدا شد.',
+  'Device checks': 'بررسی‌های دستگاه',
+  'Network proxy': 'پروکسی شبکه',
+  'Traffic goes through a proxy that could read it.':
+      'ترافیک از پروکسی‌ای می‌گذرد که می‌تواند آن را بخواند.',
+  'Developer options': 'گزینه‌های توسعه‌دهنده',
+  'Android developer options are turned on.':
+      'گزینه‌های توسعه‌دهنده اندروید روشن است.',
+  'External storage': 'حافظه خارجی',
+  'The app is installed on an SD card that other apps can read.':
+      'اپ روی کارت حافظه‌ای نصب شده که اپ‌های دیگر می‌توانند آن را بخوانند.',
 };
