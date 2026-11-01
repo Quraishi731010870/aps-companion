@@ -1,6 +1,10 @@
 import 'dart:convert';
 
+import 'package:afghan_emi/src/core/config/app_environment.dart';
 import 'package:afghan_emi/src/core/network/api_client.dart';
+import 'package:afghan_emi/src/features/device_integrity/data/device_integrity_checker.dart';
+import 'package:afghan_emi/src/features/device_integrity/domain/device_integrity_report.dart';
+import 'package:afghan_emi/src/features/device_integrity/domain/integrity_signal.dart';
 import 'package:afghan_emi/src/features/activity/presentation/view_models/activities.dart';
 import 'package:afghan_emi/src/features/payments/data/card_vault_provider.dart';
 import 'package:afghan_emi/src/features/payments/data/payment_gateway_provider.dart';
@@ -16,15 +20,22 @@ import '../../../../helpers/test_app.dart';
 void main() {
   late FakePaymentGateway gateway;
   late FakeCardVault vault;
+  late FakeDeviceIntegrityChecker integrity;
   late ProviderContainer container;
 
   setUp(() {
     gateway = FakePaymentGateway();
     vault = FakeCardVault();
+    integrity = FakeDeviceIntegrityChecker();
     container = ProviderContainer.test(
       overrides: [
         paymentGatewayProvider.overrideWithValue(gateway),
         cardVaultProvider.overrideWithValue(vault),
+        deviceIntegrityCheckerProvider.overrideWithValue(integrity),
+        // Release behaviour: the integrity policy is always enforced.
+        appEnvironmentProvider.overrideWithValue(
+          const AppEnvironment(isRelease: true),
+        ),
       ],
     );
     // Keep the autoDispose view model alive for the whole test.
@@ -40,6 +51,29 @@ void main() {
         amount: amount,
         reference: 'rent',
       );
+
+  test('re-checks the device before every payment', () async {
+    await submit();
+    await submit(amount: 200);
+    expect(integrity.checks, greaterThanOrEqualTo(2));
+    expect(gateway.requests, hasLength(2));
+  });
+
+  test('a medium-risk device cannot pay', () async {
+    integrity.signals = {IntegritySignal.emulator};
+    await submit();
+
+    final submission = container.read(paymentSubmissionProvider);
+    expect(submission.error, isA<PaymentsBlockedException>());
+    expect(gateway.requests, isEmpty);
+  });
+
+  test('a low-risk device can still pay', () async {
+    integrity.signals = {IntegritySignal.developerOptions};
+    await submit();
+
+    expect(gateway.requests, hasLength(1));
+  });
 
   test('starts with nothing submitted', () {
     final submission = container.read(paymentSubmissionProvider);

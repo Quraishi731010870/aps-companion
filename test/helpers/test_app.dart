@@ -3,6 +3,9 @@ import 'package:afghan_emi/src/core/config/app_environment.dart';
 import 'package:afghan_emi/src/core/storage/secure_store.dart';
 import 'package:afghan_emi/src/features/auth/data/auth_repository.dart';
 import 'package:afghan_emi/src/features/auth/domain/user_profile.dart';
+import 'package:afghan_emi/src/features/device_integrity/data/device_integrity_checker.dart';
+import 'package:afghan_emi/src/features/device_integrity/domain/device_integrity_report.dart';
+import 'package:afghan_emi/src/features/device_integrity/domain/integrity_signal.dart';
 import 'package:afghan_emi/src/features/payments/domain/card_details.dart';
 import 'package:afghan_emi/src/features/payments/domain/card_vault.dart';
 import 'package:afghan_emi/src/features/payments/domain/saved_card.dart';
@@ -260,8 +263,33 @@ MobileConfiguration testConfig({
   fromCache: false,
 );
 
-List<Override> _overrides(PaymentGateway? gateway, List<Override> extra) => [
+/// Device checks double: reports [signals] and counts runs.
+class FakeDeviceIntegrityChecker implements DeviceIntegrityChecker {
+  FakeDeviceIntegrityChecker({this.signals = const {}});
+
+  Set<IntegritySignal> signals;
+  int checks = 0;
+
+  @override
+  Future<DeviceIntegrityReport> check() async {
+    checks++;
+    return DeviceIntegrityReport(
+      platform: TargetPlatform.android,
+      signals: signals,
+      checkedAt: DateTime(2026, 11, 1, 9, 30),
+    );
+  }
+}
+
+List<Override> _overrides(
+  PaymentGateway? gateway,
+  DeviceIntegrityChecker? integrity,
+  List<Override> extra,
+) => [
   paymentGatewayProvider.overrideWithValue(gateway ?? FakePaymentGateway()),
+  deviceIntegrityCheckerProvider.overrideWithValue(
+    integrity ?? FakeDeviceIntegrityChecker(),
+  ),
   ...extra,
 ];
 
@@ -269,11 +297,12 @@ List<Override> _overrides(PaymentGateway? gateway, List<Override> extra) => [
 Future<void> pumpApp(
   WidgetTester tester, {
   PaymentGateway? gateway,
+  DeviceIntegrityChecker? integrity,
   List<Override> overrides = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: _overrides(gateway, overrides),
+      overrides: _overrides(gateway, integrity, overrides),
       child: const AfghanEmiApp(),
     ),
   );
@@ -285,11 +314,12 @@ Future<void> pumpScreen(
   WidgetTester tester,
   Widget screen, {
   PaymentGateway? gateway,
+  DeviceIntegrityChecker? integrity,
   List<Override> overrides = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: _overrides(gateway, overrides),
+      overrides: _overrides(gateway, integrity, overrides),
       child: MaterialApp(home: Scaffold(body: screen)),
     ),
   );

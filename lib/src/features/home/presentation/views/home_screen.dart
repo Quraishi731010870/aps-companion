@@ -7,6 +7,7 @@ import '../../../../core/widgets/async_views.dart';
 import '../../../activity/presentation/view_models/activities.dart';
 import '../../../activity/presentation/widgets/activity_tile.dart';
 import '../../../auth/presentation/view_models/current_user.dart';
+import '../../../device_integrity/presentation/widgets/integrity_banner.dart';
 import '../../../payments/presentation/view_models/enabled_operations.dart';
 import '../../../payments/domain/payment_transaction.dart';
 import '../../../payments/presentation/view_models/linked_card.dart';
@@ -108,6 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           const SizedBox(height: 18),
+          const IntegrityBanner(),
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(

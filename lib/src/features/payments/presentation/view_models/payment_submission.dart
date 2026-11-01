@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../activity/presentation/view_models/activities.dart';
+import '../../../device_integrity/domain/device_integrity_report.dart';
+import '../../../device_integrity/presentation/view_models/device_integrity.dart';
 import '../../data/card_vault_provider.dart';
 import '../../data/payment_gateway_provider.dart';
 import '../../domain/card_details.dart';
@@ -54,6 +56,13 @@ class PaymentSubmission extends _$PaymentSubmission {
     final key = _keyFor(attempt);
     state = const AsyncLoading();
     final result = await AsyncValue.guard(() async {
+      // Re-check right before money moves: Frida or a debugger can attach
+      // after launch.
+      await ref.read(deviceIntegrityProvider.notifier).recheck();
+      final integrity = ref.read(integrityStatusProvider);
+      if (!integrity.verdict.paymentsAllowed) {
+        throw PaymentsBlockedException(integrity.risk);
+      }
       final encryptedCard = card == null
           ? null
           : await ref.read(cardVaultProvider).encryptForPayment(card);

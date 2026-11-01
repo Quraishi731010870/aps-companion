@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
+import '../../../device_integrity/presentation/widgets/integrity_banner.dart';
 import '../../../payments/presentation/view_models/enabled_operations.dart';
 import '../../../payments/presentation/views/payment_flow.dart';
 
@@ -37,6 +38,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
             style: const TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 18),
+          const IntegrityBanner(),
           TextField(
             onChanged: (value) => setState(() => query = value),
             decoration: InputDecoration(
